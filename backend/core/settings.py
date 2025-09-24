@@ -3,11 +3,13 @@ from pathlib import Path
 import dj_database_url
 from dotenv import load_dotenv
 load_dotenv()
+
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
 AUTH_USER_MODEL = "users.User"
+
 INSTALLED_APPS = [
     "django.contrib.admin",
     "django.contrib.auth",
@@ -67,10 +69,12 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "core.wsgi.application"
-
+DATABASE_URL = os.getenv("DATABASE_URL")
+if not DATABASE_URL:
+    raise Exception("DATABASE_URL environment variable not set!")
 DATABASES = {
-    "default": dj_database_url.parse(os.getenv("DATABASE_URL"))
-    }
+    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600),
+}
 
 AUTH_PASSWORD_VALIDATORS = [
     {
