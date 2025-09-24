@@ -63,7 +63,7 @@ export default function ChatRoom() {
   }, [chat]);
 
   useEffect(() => {
-    const socketUrl = `${config.WS_URL}/ws/chat/random/`;
+    const socketUrl = `${config.WS_URL}/random/`;
     ws.current = new WebSocket(socketUrl);
 
     ws.current.onopen = () => setIsConnected(true);
