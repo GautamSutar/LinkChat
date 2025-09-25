@@ -7,7 +7,7 @@ const HomePage: React.FC = () => {
     <div className="flex flex-col min-h-screen bg-gray-100 p-4">
       <header className="text-center mb-6">
         <h1 className="text-4xl font-bold text-gray-800">
-          Welcome to Funtalky 🚀
+          Welcome to LinkChat 🚀
         </h1>
         <p className="mt-2 text-lg text-gray-600">
           Connect with new people through text or video. Start your conversation

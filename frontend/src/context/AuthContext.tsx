@@ -1,10 +1,24 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, type ReactNode } from "react";
 import { getToken, setToken, removeToken } from "../utils/storage";
 
-export const AuthContext = createContext();
+interface User {
+  token: string;
+}
 
-export function AuthProvider({ children }) {
-  const [user, setUser] = useState(null);
+interface AuthContextType {
+  user: User | null;
+  login: (token: string) => void;
+  logout: () => void;
+}
+
+interface AuthProviderProps {
+  children: ReactNode;
+}
+
+export const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+export function AuthProvider({ children }: AuthProviderProps) {
+  const [user, setUser] = useState<User | null>(null);
 
   useEffect(() => {
     const token = getToken();
@@ -13,7 +27,7 @@ export function AuthProvider({ children }) {
     }
   }, []);
 
-  const login = (token) => {
+  const login = (token: string) => {
     setToken(token);
     setUser({ token });
   };

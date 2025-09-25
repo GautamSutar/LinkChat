@@ -12,7 +12,7 @@ const Navbar: React.FC = () => {
               🚀
             </span>
             <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
-              Funtalky
+              LinkChat
             </h1>
           </Link>
 
