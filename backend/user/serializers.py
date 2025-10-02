@@ -1,5 +1,5 @@
 from rest_framework.serializers import ModelSerializer
-from .models import User
+from user.models import User
 from rest_framework import serializers
 from django.contrib.auth import authenticate
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -41,3 +41,18 @@ class UserLoginSerializer(serializers.Serializer):
                 "gender": user.gender,
             },
         }
+
+
+class UserProfileSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = User
+        Fields = (
+            "id",
+            "email",
+            "display_name",
+            "avatar_url",
+            "gender",
+            "free_calls_left",
+            "coins_balance",
+        )
+        read_only_fields = ("email", "id", "free_calls_left", "coins_balance")

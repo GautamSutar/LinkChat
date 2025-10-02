@@ -1,45 +1,61 @@
-import { createContext, useState, useEffect, type ReactNode } from "react";
-import { getToken, setToken, removeToken } from "../utils/storage";
-
-interface User {
-  token: string;
-}
+import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { jwtDecode } from 'jwt-decode';
+import TokenService from '../service/token.service';
+import { loginUser, signupUser } from '../api/auth';
 
 interface AuthContextType {
-  user: User | null;
-  login: (token: string) => void;
+  user: any;
+  login: (credentials: any) => Promise<void>;
+  signup: (userData: any) => Promise<void>;
   logout: () => void;
+  isAuthenticated: boolean;
 }
 
-interface AuthProviderProps {
-  children: ReactNode;
-}
+const AuthContext = createContext<AuthContextType | null>(null);
 
-export const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export function AuthProvider({ children }: AuthProviderProps) {
-  const [user, setUser] = useState<User | null>(null);
+export const AuthProvider = ({ children }: { children: ReactNode }) => {
+  const [user, setUser] = useState<any>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
-    const token = getToken();
-    if (token) {
-      setUser({ token });
+    const tokens = TokenService.getTokens();
+    if (tokens) {
+      try {
+        const decodedUser = jwtDecode(tokens.access);
+        setUser(decodedUser);
+      } catch (error) {
+        TokenService.clearTokens();
+      }
     }
   }, []);
 
-  const login = (token: string) => {
-    setToken(token);
-    setUser({ token });
+  const login = async (credentials) => {
+    const tokens = await loginUser(credentials);
+    TokenService.setTokens(tokens);
+    const decodedUser = jwtDecode(tokens.access);
+    setUser(decodedUser);
+    navigate('/');
+  };
+
+  const signup = async (userData) => {
+    await signupUser(userData);
+    await login({ email: userData.email, password: userData.password });
   };
 
   const logout = () => {
-    removeToken();
+    TokenService.clearTokens();
     setUser(null);
+    navigate('/login');
   };
 
+  const isAuthenticated = !!user;
+
   return (
-    <AuthContext.Provider value={{ user, login, logout }}>
+    <AuthContext.Provider value={{ user, login, signup, logout, isAuthenticated }}>
       {children}
     </AuthContext.Provider>
   );
-}
+};
+
+export default AuthContext;

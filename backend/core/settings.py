@@ -1,14 +1,16 @@
 import os
 from pathlib import Path
-import dj_database_url
 from dotenv import load_dotenv
+import cloudinary
+
 load_dotenv()
+
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY")
 DEBUG = os.getenv("DEBUG", "True") == "True"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "localhost,127.0.0.1").split(",")
-AUTH_USER_MODEL = "users.User"
+AUTH_USER_MODEL = "user.User"
 
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -21,7 +23,7 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "channels",
     "corsheaders",
-    "users",
+    "user",
     "chat",
     "subscriptions",
 ]
@@ -31,6 +33,13 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
 }
+
+cloudinary.config(
+    CLOUDINARY_CLOUD_NAME=os.getenv('CLOUDINARY_CLOUD_NAME'),
+    CLOUDINARY_API_KEY=os.getenv('CLOUDINARY_API_KEY'),
+    CLOUDINARY_API_SECRET=os.getenv('CLOUDINARY_API_SECRET'),
+)
+
 
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
@@ -69,13 +78,19 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = "core.wsgi.application"
-DATABASE_URL = os.getenv("DATABASE_URL")
-if not DATABASE_URL:
-    raise Exception("DATABASE_URL environment variable not set!")
 DATABASES = {
-    "default": dj_database_url.parse(DATABASE_URL, conn_max_age=600),
+    "default": {
+        "ENGINE": "django.db.backends.postgresql",
+        "NAME": os.getenv("DB_NAME"),
+        "USER": os.getenv("DB_USER"),
+        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "HOST": os.getenv("DB_HOST"),
+        "PORT": os.getenv("DB_PORT", "5432"),
+        "OPTIONS": {
+            "sslmode": "require",
+        },
+    }
 }
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator",

@@ -2,12 +2,20 @@ from rest_framework.response import Response
 from rest_framework import status
 from rest_framework import generics, permissions
 from django.db import IntegrityError
-from .models import User
-from .serializers import UserSignupSerializer, UserLoginSerializer
-
+from ..models import User
+from ..serializers import (
+    UserSignupSerializer,
+    UserLoginSerializer,
+    UserProfileSerializer,
+)
+from rest_framework.views import APIView
+from rest_framework.parsers import MultiPartParser, FormParser
 
 import logging
+
 logger = logging.getLogger(__name__)
+
+
 class UserSignupView(generics.CreateAPIView):
     queryset = User.objects.all()
     serializer_class = UserSignupSerializer
@@ -25,10 +33,9 @@ class UserSignupView(generics.CreateAPIView):
         except Exception as e:
             logger.error(f"Signup failed: {str(e)}")
             return Response(
-                {"error": "Something went wrong during signup."},
+                {"error": "Something went wrong during signup Gautam."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
-
 
 
 class UserLoginView(generics.GenericAPIView):

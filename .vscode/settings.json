@@ -1,0 +1,6 @@
+{
+  "files.autoSave": "afterDelay",
+  "files.autoSaveDelay": 750,
+  "files.trimTrailingWhitespace": true,
+  "editor.formatOnSave": true
+}

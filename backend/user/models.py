@@ -1,9 +1,9 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser, BaseUserManager
+import uuid
 
 
 class CustomUserManager(BaseUserManager):
-
     def create_user(self, email, password=None, gender="O", **extra_fields):
         if not email:
             raise ValueError("Email must be set")
@@ -13,21 +13,26 @@ class CustomUserManager(BaseUserManager):
         user.save(using=self._db)
         return user
 
-    # def create_superuser(self, email, password=None, gender="O", **extra_fields):
-    #     # Only for dev/admin, not needed for your free version users
-    #     extra_fields.setdefault("is_staff", True)
-    #     extra_fields.setdefault("is_superuser", True)
-    #     return self.create_user(email, password, gender, **extra_fields)
-
 
 class User(AbstractUser):
+
+    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     username = None
     email = models.EmailField(unique=True)
     gender_choices = [("M", "Male"), ("F", "Female"), ("O", "Other")]
     gender = models.CharField(max_length=1, choices=gender_choices, default="O")
 
+    display_name = models.CharField(max_length=150, blank=True, null=True)
+    avtar_url = models.URLField(max_length=512, blank=True, null=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    free_calls_left = models.PositiveIntegerField(default=10)
+    coins_balance = models.PositiveIntegerField(default=0)
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
     objects = CustomUserManager()
+
     def __str__(self):
         return self.email

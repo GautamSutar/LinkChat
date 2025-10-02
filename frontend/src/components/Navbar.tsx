@@ -3,17 +3,12 @@ import { NavLink, Link } from "react-router-dom"; // Use NavLink for navigation 
 
 const Navbar: React.FC = () => {
   return (
-    <nav className="bg-slate-900 text-white shadow-lg">
+    <nav className="bg-black text-white shadow-lg">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Left Side: Logo and Brand (using Link for non-nav items) */}
-          <Link to="/" className="flex items-center gap-2">
-            <span className="text-2xl" role="img" aria-label="rocket">
-              🚀
-            </span>
-            <h1 className="text-2xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-cyan-400">
-              LinkChat
-            </h1>
+          <Link to="/">
+            <img src="/LinkChatLogo.jpeg" alt="LinkChat Logo" className="h-10 w-auto"  />
           </Link>
 
           {/* Center: Navigation Links using NavLink */}
@@ -23,10 +18,9 @@ const Navbar: React.FC = () => {
                 to="/"
                 // This function dynamically applies classes
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-gray-700 text-white" // Style for the active link
-                      : "text-gray-300 hover:bg-gray-700 hover:text-white" // Style for inactive links
+                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+                    ? "bg-gray-700 text-white" // Style for the active link
+                    : "text-gray-300 hover:bg-gray-700 hover:text-white" // Style for inactive links
                   }`
                 }
               >
@@ -36,10 +30,9 @@ const Navbar: React.FC = () => {
               <NavLink
                 to="/features"
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                    isActive
-                      ? "bg-gray-700 text-white"
-                      : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
+                    ? "bg-gray-700 text-white"
+                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
                   }`
                 }
               >

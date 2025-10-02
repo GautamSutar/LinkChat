@@ -1,6 +1,11 @@
-import axios from "axios";
+import axiosInstance from './axiosInstance';
 
-const API = axios.create({ baseURL: "http://localhost:8000/api" });
+export const loginUser = async (credentials) => {
+    const response = await axiosInstance.post('/users/obtainToken/', credentials);
+    return response.data;
+};
 
-export const signup = (data) => API.post("/users/signup/", data);
-export const login = (data) => API.post("/users/login/", data);
+export const signupUser = async (userData) => {
+    const response = await axiosInstance.post('/users/signup/', userData);
+    return response.data;
+};  
