@@ -9,4 +9,6 @@ urlpatterns = [
     path("obtainToken/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("login/", UserLoginView.as_view(), name="user-login"),
+    path("getUser/", UserProfileView.as_view(), name="user-retrieve"),
+    path("upload-avatar/", AvatarUploadView.as_view(), name="upload-avatar"),
 ]

@@ -1,34 +1,39 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import React, { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { useAuth } from "../../hooks/useAuth";
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
-    username: '',
-    email: '',
-    password: '',
+    display_name: "",
+    email: "",
+    password: "",
+    gender: "O", // Default gender to 'Other'
   });
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { signup } = useAuth();
+  const navigate = useNavigate();
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
+  ) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setError('');
+    setError("");
     setLoading(true);
     try {
       await signup(formData);
+      navigate("/login");
     } catch (err: any) {
       const errors = err.response?.data;
       if (errors) {
-        const errorMessages = Object.values(errors).flat().join(' ');
-        setError(errorMessages || 'Signup failed. Please try again.');
+        const errorMessages = Object.values(errors).flat().join(" ");
+        setError(errorMessages || "Signup failed. Please try again.");
       } else {
-        setError('An unknown error occurred.');
+        setError("An unknown error occurred.");
       }
     } finally {
       setLoading(false);
@@ -36,30 +41,33 @@ const SignupPage: React.FC = () => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen  bg-transparent">
+    <div className="flex items-center justify-center min-h-screen bg-transparent">
       <div className="w-full max-w-md p-8 space-y-6 bg-transparent border border-gray-700 rounded-lg shadow-md">
-        <h2 className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-white to-green-500 ">
+        <h2 className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-white to-green-500">
           Create your LinkChat Account
         </h2>
         <form className="space-y-6" onSubmit={handleSubmit}>
-          {/* Add fields for username, email, password */}
+          {/* Field for Display Name */}
           <div>
             <label
-              htmlFor="username"
+              htmlFor="display_name"
               className="text-sm font-medium text-gray-100"
             >
-              Username
+              Display Name
             </label>
             <input
-              id="username"
-              name="username"
+              id="display_name"
+              name="display_name"
               type="text"
-              placeholder="Enter your username"
+              placeholder="Enter your display name"
               required
+              value={formData.display_name}
               onChange={handleChange}
-              className="w-full px-3 py-2 mt-1 border text-yellow-500 placeholder-gray-400 border-gray-300 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
+              className="w-full px-3 py-2 mt-1 border text-yellow-500 placeholder-gray-400 border-gray-300 rounded-md shadow-sm "
             />
           </div>
+
+          {/* Field for Email */}
           <div>
             <label
               htmlFor="email"
@@ -73,10 +81,13 @@ const SignupPage: React.FC = () => {
               type="email"
               required
               placeholder="Enter your email"
+              value={formData.email}
               onChange={handleChange}
               className="w-full px-3 py-2 mt-1 border text-yellow-500 border-gray-300 placeholder-gray-400 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
             />
           </div>
+
+          {/* Field for Password */}
           <div>
             <label
               htmlFor="password"
@@ -90,11 +101,44 @@ const SignupPage: React.FC = () => {
               type="password"
               required
               placeholder="Enter your password"
+              value={formData.password}
               onChange={handleChange}
               className="w-full px-3 py-2 mt-1 border text-yellow-500 border-gray-300 placeholder-gray-400 rounded-md shadow-sm focus:ring-emerald-500 focus:border-emerald-500"
             />
           </div>
+
+          {/* Field for Gender */}
+          <div>
+            <label
+              htmlFor="gender"
+              className="text-sm font-medium text-gray-100"
+            >
+              Gender
+            </label>
+            <select
+              id="gender"
+              name="gender"
+              required
+              value={formData.gender}
+              onChange={handleChange}
+              // Keep the select styling for consistency and focus rings
+              className="w-full px-3 py-2 mt-1 border text-yellow-500 border-gray-300 rounded-md shadow-sm focus:ring-black focus:border-black"
+            >
+              {/* Apply black background and yellow text to options */}
+              <option value="O" className="bg-black text-yellow-500">
+                Other
+              </option>
+              <option value="M" className="bg-black text-yellow-500">
+                Male
+              </option>
+              <option value="F" className="bg-black text-yellow-500">
+                Female
+              </option>
+            </select>
+          </div>
+
           {error && <p className="text-sm text-red-600">{error}</p>}
+
           <div>
             <button
               type="submit"

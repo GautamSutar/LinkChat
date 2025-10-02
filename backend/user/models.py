@@ -23,7 +23,7 @@ class User(AbstractUser):
     gender = models.CharField(max_length=1, choices=gender_choices, default="O")
 
     display_name = models.CharField(max_length=150, blank=True, null=True)
-    avtar_url = models.URLField(max_length=512, blank=True, null=True)
+    avatar_url = models.URLField(max_length=512, blank=True, null=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

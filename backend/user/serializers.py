@@ -8,7 +8,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 class UserSignupSerializer(ModelSerializer):
     class Meta:
         model = User
-        fields = ["id", "email", "password", "gender"]
+        fields = ["id", "email", "display_name", "password", "gender"]
         extra_kwargs = {"password": {"write_only": True}}
 
     def create(self, validated_data):
@@ -21,7 +21,7 @@ class UserSignupSerializer(ModelSerializer):
 
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)
+    password = serializers.CharField(write_only=True)   
 
     def validate(self, data):
         email = data.get("email")
@@ -46,7 +46,7 @@ class UserLoginSerializer(serializers.Serializer):
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        Fields = (
+        fields = (
             "id",
             "email",
             "display_name",
