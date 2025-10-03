@@ -1,16 +1,20 @@
-import React, { createContext, useState, useEffect, ReactNode } from 'react';
+import { createContext, useState, useEffect } from "react";
+import type { ReactNode } from "react";
 import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import TokenService from '../service/token.service';
-import { loginUser, signupUser } from '../api/auth';
+import { loginUser, signupUser } from '../api/auth.ts';
 
 interface AuthContextType {
   user: any;
-  login: (credentials: any) => Promise<void>;
-  signup: (userData: any) => Promise<void>;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  signup: (userData: SignupData) => Promise<void>;
   logout: () => void;
   isAuthenticated: boolean;
 }
+
+type LoginCredentials = { email: string; password: string };
+type SignupData = { email: string; password: string };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -30,7 +34,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, []);
 
-  const login = async (credentials) => {
+  const login = async (credentials: LoginCredentials) => {
     const tokens = await loginUser(credentials);
     TokenService.setTokens(tokens);
     const decodedUser = jwtDecode(tokens.access);
@@ -38,7 +42,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     navigate('/');
   };
 
-  const signup = async (userData) => {
+  const signup = async (userData: SignupData) => {
     await signupUser(userData);
     await login({ email: userData.email, password: userData.password });
   };
