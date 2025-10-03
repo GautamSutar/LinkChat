@@ -4,7 +4,13 @@ import { useAuth } from "../../hooks/useAuth";
 import type { SignupData } from "../../api/auth.ts";
 
 const SignupPage: React.FC = () => {
-  const [formData, setFormData] = useState({
+  type SignupForm = {
+    display_name: string;
+    email: string;
+    password: string;
+    gender: "M" | "F" | "O";
+  };
+  const [formData, setFormData] = useState<SignupForm>({
     display_name: "",
     email: "",
     password: "",
@@ -18,7 +24,12 @@ const SignupPage: React.FC = () => {
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    if (name === "gender") {
+      setFormData({ ...formData, gender: value as "M" | "F" | "O" });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -31,7 +42,7 @@ const SignupPage: React.FC = () => {
         display_name: formData.display_name,
         email: formData.email,
         password: formData.password,
-        gender: formData.gender,
+        gender: formData.gender as "M" | "F" | "O",
       };
 
       await signup(signupPayload);
@@ -136,13 +147,13 @@ const SignupPage: React.FC = () => {
             >
               {/* Apply black background and yellow text to options */}
               <option value="O" className="bg-black text-yellow-500">
-                O
+                Other
               </option>
               <option value="M" className="bg-black text-yellow-500">
-                M
+                Male
               </option>
               <option value="F" className="bg-black text-yellow-500">
-                F
+                Female
               </option>
             </select>
           </div>
