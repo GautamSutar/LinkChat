@@ -53,6 +53,7 @@ MIDDLEWARE = [
 ]
 
 CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOW_CREDENTIALS = True
 ASGI_APPLICATION = "core.asgi.application"
 CHANNEL_LAYERS = {
     "default": {
