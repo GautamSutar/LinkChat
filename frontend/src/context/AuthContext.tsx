@@ -4,7 +4,8 @@ import { useNavigate } from 'react-router-dom';
 import { jwtDecode } from 'jwt-decode';
 import TokenService from '../service/token.service';
 import { loginUser, signupUser } from '../api/auth.ts';
-
+import type { LoginCredentials } from '../api/auth.ts';
+import type { SignupData } from '../api/auth.ts';
 interface AuthContextType {
   user: any;
   login: (credentials: LoginCredentials) => Promise<void>;
@@ -13,8 +14,6 @@ interface AuthContextType {
   isAuthenticated: boolean;
 }
 
-type LoginCredentials = { email: string; password: string };
-type SignupData = { email: string; password: string };
 
 const AuthContext = createContext<AuthContextType | null>(null);
 
