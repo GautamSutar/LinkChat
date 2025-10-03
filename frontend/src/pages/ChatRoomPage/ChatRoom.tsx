@@ -73,7 +73,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave }) => { // Assuming you hav
     }
 
     const socketUrl = `${config.WS_URL}random/`;
-    const socket = new WebSocket(socketUrl);
+    const socket: WebSocket = new WebSocket(socketUrl);
     ws.current = socket;
 
     socket.onopen = () => setIsConnected(true);
