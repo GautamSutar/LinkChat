@@ -6,10 +6,10 @@ export interface LoginCredentials {
 }
 
 export interface SignupData {
-    username: string;
+    display_name: string;
     email: string;
     password: string;
-    gender: "male" | "female" | "other";
+    gender: "M" | "F" | "O";
 }
 export const loginUser = async (credentials:LoginCredentials) => {
     const response = await axiosInstance.post('/users/obtainToken/', credentials);

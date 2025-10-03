@@ -1,13 +1,14 @@
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../../hooks/useAuth";
+import type { SignupData } from "../../api/auth.ts";
 
 const SignupPage: React.FC = () => {
   const [formData, setFormData] = useState({
     display_name: "",
     email: "",
     password: "",
-    gender: "O", // Default gender to 'Other'
+    gender: "O",
   });
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
@@ -24,8 +25,16 @@ const SignupPage: React.FC = () => {
     e.preventDefault();
     setError("");
     setLoading(true);
+
     try {
-      await signup(formData);
+      const signupPayload: SignupData = {
+        display_name: formData.display_name,
+        email: formData.email,
+        password: formData.password,
+        gender: formData.gender,
+      };
+
+      await signup(signupPayload);
       navigate("/login");
     } catch (err: any) {
       const errors = err.response?.data;
@@ -39,6 +48,7 @@ const SignupPage: React.FC = () => {
       setLoading(false);
     }
   };
+
 
   return (
     <div className="flex items-center justify-center min-h-screen bg-transparent">
@@ -126,13 +136,13 @@ const SignupPage: React.FC = () => {
             >
               {/* Apply black background and yellow text to options */}
               <option value="O" className="bg-black text-yellow-500">
-                Other
+                O
               </option>
               <option value="M" className="bg-black text-yellow-500">
-                Male
+                M
               </option>
               <option value="F" className="bg-black text-yellow-500">
-                Female
+                F
               </option>
             </select>
           </div>
