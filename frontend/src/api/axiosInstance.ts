@@ -1,6 +1,6 @@
 import axios from 'axios';
 import TokenService from '../service/token.service';
-import config from '../config';
+import config from '../config.ts';
 
 const axiosInstance = axios.create({
     baseURL: config.API_URL,
