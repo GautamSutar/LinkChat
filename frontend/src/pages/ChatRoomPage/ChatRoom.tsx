@@ -1,9 +1,10 @@
 import { useEffect, useState, useRef } from "react";
-import config from "../../config";
+import config from "../../config.ts";
 import TokenService from "../../service/token.service"; // Assuming you have this
 
 // --- Helper component for individual chat messages ---
-const MessageBubble = ({ fullMessage }) => {
+type MessageBubbleProps = { fullMessage: string };
+const MessageBubble: React.FC<MessageBubbleProps> = ({ fullMessage }) => {
   const isYou = fullMessage.startsWith("You:");
   const isStranger = fullMessage.startsWith("Stranger:");
   const isSystem = fullMessage.startsWith("---");
@@ -48,12 +49,13 @@ const MessageBubble = ({ fullMessage }) => {
 };
 
 // --- Main ChatRoom Component ---
-const ChatRoom = ({ onLeave }) => { // Assuming you have an onLeave prop
-  const [message, setMessage] = useState("");
-  const [chat, setChat] = useState([]);
-  const [isConnected, setIsConnected] = useState(false);
-  const ws = useRef(null);
-  const chatContainerRef = useRef(null);
+type ChatRoomProps = { onLeave?: () => void };
+const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave }) => { // Assuming you have an onLeave prop
+  const [message, setMessage] = useState<string>("");
+  const [chat, setChat] = useState<string[]>([]);
+  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const ws = useRef<WebSocket | null>(null);
+  const chatContainerRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-scroll to the latest message
   useEffect(() => {
@@ -76,7 +78,7 @@ const ChatRoom = ({ onLeave }) => { // Assuming you have an onLeave prop
 
     socket.onopen = () => setIsConnected(true);
 
-    socket.onmessage = (event) => {
+    socket.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
       if (data.message) {
         setChat((prev) => [...prev, data.message]);
