@@ -3,9 +3,7 @@ import uuid
 from collections import deque
 from channels.generic.websocket import AsyncWebsocketConsumer
 
-# IMPORTANT: This in-memory state will NOT work if you run more than one
-# server process (e.g., with Gunicorn workers). For production, you must
-# use a shared backend like Redis to manage the waiting queue.
+
 waiting_for_partner = deque()
 consumer_to_room = {}
 
@@ -57,37 +55,56 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
             await self.channel_layer.group_discard(room_group_name, self.channel_name)
 
-    # MODIFIED - This is now simpler and more powerful
     async def receive(self, text_data):
         data = json.loads(text_data)
-        message_content = data.get("message")
-
+        message_type = data.get("type")
         room_group_name = consumer_to_room.get(self.user_id)
-        if room_group_name and message_content:
-            # Broadcast the message to the group, including the sender's ID
+        if not room_group_name:
+            return
+        if message_type == "message":
+            message_content = data.get("message")
+            if message_content:
+                await self.channel_layer.group_send(
+                    room_group_name,
+                    {
+                        "type": "chat_message",
+                        "message": message_content,
+                        "sender_user_id": self.user_id,
+                        },
+                        )
+        elif message_type == "start_video":
+            session_id = room_group_name.replace("chat_", "")
             await self.channel_layer.group_send(
                 room_group_name,
                 {
-                    "type": "chat_message",
-                    "message": message_content,
-                    "sender_user_id": self.user_id,
-                },
+                    "type": "start_video",
+                    "session_id": session_id,
+                }
             )
 
-    # NEW - Handler for chat messages from the group
     async def chat_message(self, event):
         message = event["message"]
         sender_user_id = event["sender_user_id"]
-
-        # Determine the prefix based on whether this consumer is the sender
         if self.user_id == sender_user_id:
             prefix = "You: "
         else:
             prefix = "Stranger: "
 
-        # Send the formatted message down to the WebSocket client
         await self.send(text_data=json.dumps({"message": f"{prefix}{message}"}))
 
-    # NEW - Handler for system messages (like connect/disconnect)
     async def system_message(self, event):
-        await self.send(text_data=json.dumps({"message": event["message"]}))
+        await self.send(
+            text_data=json.dumps(
+                {
+                    "type": "system_message",
+                    "message": event["message"],
+                }
+            )
+        )
+
+    async def video_initiate(self, event):
+        await self.send(
+            text_data=json.dumps(
+                {"type": "video_initiated", "session_id": event["session_id"]}
+            )
+        )
