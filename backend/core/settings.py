@@ -52,7 +52,14 @@ MIDDLEWARE = [
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",")
+CORS_ALLOWED_ORIGINS = [
+    origin.strip() for origin in os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if origin
+]
+if not CORS_ALLOWED_ORIGINS:  # fallback safety
+    CORS_ALLOWED_ORIGINS = [
+        "https://linkchat-seven.vercel.app",
+        "http://localhost:5173",
+    ]
 CORS_ALLOW_CREDENTIALS = True
 ASGI_APPLICATION = "core.asgi.application"
 CHANNEL_LAYERS = {

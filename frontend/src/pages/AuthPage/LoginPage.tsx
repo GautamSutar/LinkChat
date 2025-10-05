@@ -27,7 +27,7 @@ const LoginPage: React.FC = () => {
   return (
     <div className="flex items-center justify-center min-h-screen  bg-transparent">
       <div className="w-full max-w-md p-8 space-y-6 bg-black border border-gray-700 rounded-lg shadow-md">
-        <h2 className="text-3xl font-bold text-center text-gray-900 text-transparent bg-clip-text bg-gradient-to-r from-white to-green-500">
+        <h2 className="text-3xl font-bold text-center text-transparent bg-clip-text bg-gradient-to-r from-white to-green-500">
           Log in to LinkChat
         </h2>
         <form className="space-y-6" onSubmit={handleSubmit}>
