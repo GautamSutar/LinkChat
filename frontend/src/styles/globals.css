@@ -1,0 +1,10 @@
+html, body {
+  scroll-behavior: smooth;
+  background-color: #0f172a; /* dark background */
+  color: white;
+  font-family: "Inter", sans-serif;
+}
+
+button, a {
+  cursor: pointer;
+}

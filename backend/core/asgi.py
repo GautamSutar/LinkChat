@@ -1,9 +1,9 @@
 # core/asgi.py
 import os
-
 from channels.routing import ProtocolTypeRouter, URLRouter
 from django.core.asgi import get_asgi_application
-import chat.routing  # Import your chat routing
+import chat.routing
+from core.middleware import TokenAuthMiddleware
 
 os.environ.setdefault("DJANGO_SETTINGS_MODULE", "core.settings")
 

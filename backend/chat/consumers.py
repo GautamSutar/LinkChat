@@ -70,16 +70,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                         "type": "chat_message",
                         "message": message_content,
                         "sender_user_id": self.user_id,
-                        },
-                        )
+                    },
+                )
         elif message_type == "start_video":
             session_id = room_group_name.replace("chat_", "")
             await self.channel_layer.group_send(
                 room_group_name,
                 {
-                    "type": "start_video",
+                    "type": "video_initiate ",
                     "session_id": session_id,
-                }
+                },
             )
 
     async def chat_message(self, event):
@@ -90,7 +90,11 @@ class ChatConsumer(AsyncWebsocketConsumer):
         else:
             prefix = "Stranger: "
 
-        await self.send(text_data=json.dumps({"message": f"{prefix}{message}"}))
+        await self.send(
+            text_data=json.dumps(
+                {"type": "chat_message", "message": f"{prefix}{message}"}
+            )
+        )
 
     async def system_message(self, event):
         await self.send(
@@ -105,6 +109,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
     async def video_initiate(self, event):
         await self.send(
             text_data=json.dumps(
-                {"type": "video_initiated", "session_id": event["session_id"]}
+                {"type": "video_initiated",
+                  "session_id": event["session_id"]}
             )
         )
