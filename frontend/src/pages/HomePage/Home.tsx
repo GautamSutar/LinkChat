@@ -3,20 +3,23 @@ import ChatRoom from "../ChatRoomPage/ChatRoom";
 import VideoCall from "../VideoCallPage/VideoCall";
 import { useAuth } from "../../hooks/useAuth";
 import FireButton from "../../components/ui/FireButton";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 type Mode = "chat" | "video";
 const HomePage: React.FC = () => {
   const [mode, setMode] = useState<Mode>("chat");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const isAuthenticated = useAuth();
+  const { isAuthenticated, logout } = useAuth();
+  const navigate = useNavigate();
 
-  const handleStartVideo = (newSessionId) => {
+  const handleStartVideo = (newSessionId: string) => {
     setSessionId(newSessionId);
     setMode("video");
   };
-  const handleLeaveVideo = () => {
+  const handleLeave = () => {
     setSessionId(null);
     setMode("chat");
+    // For a smoother UX, you could navigate away or show a "session ended" screen.
+    // Re-rendering ChatRoom will automatically start a new search for a partner.
   };
   if (isAuthenticated) {
     return (
@@ -78,10 +81,9 @@ const HomePage: React.FC = () => {
   return (
     <div className="h-screen bg-gray-900">
       {mode === "chat" ? (
-
-        <ChatRoom onStartVideo={handleStartVideo} />
+        <ChatRoom onStartVideo={handleStartVideo} onLeave={handleLeave} />
       ) : (
-        <VideoCall sessionId={sessionId} onLeaveVideo={handleLeaveVideo} />
+        <VideoCall sessionId={sessionId!} onLeaveVideo={handleLeave} />
       )}
     </div>
   );

@@ -26,7 +26,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
     ws.current = socket;
 
     socket.onopen = async () => {
-      setStatus("Waiting for partner to connect...");
+      setStatus("Waiting for partner...");
       try {
         localStream.current = await navigator.mediaDevices.getUserMedia({
           video: true,
@@ -45,7 +45,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
       const data = JSON.parse(event.data);
       switch (data.type) {
         case "partner_ready":
-          setStatus("Partner connected. Preparing video stream...");
+          setStatus("Partner connected. Preparing video...");
           createAndSendOffer();
           break;
         case "video_offer":
@@ -64,12 +64,9 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
     socket.onerror = () => setStatus("An error occurred.");
 
     return () => {
-      // Cleanup function
       localStream.current?.getTracks().forEach((track) => track.stop());
       peerConnection.current?.close();
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.close();
-      }
+      if (socket.readyState === WebSocket.OPEN) socket.close();
     };
   }, [sessionId]);
 
@@ -123,7 +120,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-gray-900 text-white p-4">
+    <div className="flex flex-col h-screen  text-white p-4">
       <header className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
         <div>
           <h1 className="text-2xl font-bold">Video Call</h1>

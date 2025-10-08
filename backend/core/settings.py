@@ -25,6 +25,7 @@ INSTALLED_APPS = [
     "corsheaders",
     "user",
     "chat",
+    "video",
     "subscriptions",
 ]
 
