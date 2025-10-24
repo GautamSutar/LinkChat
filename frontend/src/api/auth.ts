@@ -12,7 +12,12 @@ export interface SignupData {
     gender: "M" | "F" | "O";
 }
 export const loginUser = async (credentials:LoginCredentials) => {
-    const response = await axiosInstance.post('/users/obtainToken/', credentials);
+    const response = await axiosInstance.post('/users/login/', credentials);
+    console.log("user", response.data.user);
+    const user = response.data.user;
+    localStorage.setItem("user", JSON.stringify(user));
+    localStorage.setItem("email", response.data.user.email);
+    localStorage.setItem("display_name", response.data.user.display_name);
     return response.data;
 };
 

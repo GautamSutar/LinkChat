@@ -23,6 +23,7 @@ class UserSignupView(generics.CreateAPIView):
 
     def create(self, request, *args, **kwargs):
         try:
+            print("raw data:", request.data)
             serializer = self.get_serializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             self.perform_create(serializer)
@@ -33,7 +34,7 @@ class UserSignupView(generics.CreateAPIView):
         except Exception as e:
             logger.error(f"Signup failed: {str(e)}")
             return Response(
-                {"error": "Something went wrong during signup Gautam."},
+                {"error": "Something went wrong during signup."},
                 status=status.HTTP_500_INTERNAL_SERVER_ERROR,
             )
 

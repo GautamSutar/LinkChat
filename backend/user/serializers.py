@@ -10,18 +10,13 @@ class UserSignupSerializer(ModelSerializer):
         model = User
         fields = ["id", "email", "display_name", "password", "gender"]
         extra_kwargs = {"password": {"write_only": True}}
-
     def create(self, validated_data):
-        return User.objects.create_user(
-            email=validated_data["email"],
-            password=validated_data["password"],
-            gender=validated_data.get("gender", "O"),
-        )
-
+        user = User.objects.create_user(**validated_data)
+        return user
 
 class UserLoginSerializer(serializers.Serializer):
     email = serializers.EmailField()
-    password = serializers.CharField(write_only=True)   
+    password = serializers.CharField(write_only=True)
 
     def validate(self, data):
         email = data.get("email")
@@ -30,13 +25,14 @@ class UserLoginSerializer(serializers.Serializer):
 
         if user is None:
             raise serializers.ValidationError("Invalid email or password")
-
+        
         refresh = RefreshToken.for_user(user)
         return {
             "refresh": str(refresh),
             "access": str(refresh.access_token),
             "user": {
                 "id": user.id,
+                "display_name": user.display_name,
                 "email": user.email,
                 "gender": user.gender,
             },
@@ -56,3 +52,6 @@ class UserProfileSerializer(serializers.ModelSerializer):
             "coins_balance",
         )
         read_only_fields = ("email", "id", "free_calls_left", "coins_balance")
+
+
+

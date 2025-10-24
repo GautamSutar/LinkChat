@@ -1,25 +1,29 @@
 import { useEffect, useState, useRef } from "react";
 import config from "../../config.ts";
 import TokenService from "../../service/token.service";
-
-type ChatRoomProps = {
-  onLeave?: () => void;
-  onStartVideo: (sessionId: string) => void;
+type MessageBubbleProps = {
+  message: string;
+  sender: string;
+  myName: string;
+  type: string;
 };
 
-type MessageBubbleProps = { fullMessage: string };
-const MessageBubble: React.FC<MessageBubbleProps> = ({ fullMessage }) => {
-  const isYou = fullMessage.startsWith("You:");
-  const isStranger = fullMessage.startsWith("Stranger:");
-  const isSystem = fullMessage.startsWith("---");
-
-  let messageContent = fullMessage;
-  if (isYou) {
-    messageContent = fullMessage.substring(5);
-  } else if (isStranger) {
-    messageContent = fullMessage.substring(10);
+const MessageBubble: React.FC<MessageBubbleProps> = ({
+  message,
+  sender,
+  myName,
+  type,
+}) => {
+  const isYou = sender === myName;
+  if (type === "system_message" && !isYou) {
+    return (
+      <div className="self-center my-3">
+        <p className="text-xs text-gray-400 italic px-3 py-1 bg-gray-800 rounded-full">
+          {message}
+        </p>
+      </div>
+    );
   }
-
   const alignClass = isYou ? "self-end" : "self-start";
   const bubbleColor = isYou
     ? "bg-indigo-600 text-white"
@@ -28,22 +32,14 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ fullMessage }) => {
     ? "rounded-b-xl rounded-tl-xl"
     : "rounded-b-xl rounded-tr-xl";
 
-  if (isSystem) {
-    return (
-      <div className="self-center my-3">
-        <p className="text-xs text-gray-400 italic px-3 py-1 bg-gray-800 rounded-full">
-          {fullMessage}
-        </p>
-      </div>
-    );
-  }
-
+  const display_name = isYou ? "You" : sender;
   return (
     <div className={`flex flex-col ${alignClass} max-w-sm md:max-w-md my-1`}>
       <div
         className={`px-4 py-2 rounded-lg shadow-md ${bubbleColor} ${bubbleRounding}`}
       >
-        <p className="text-sm break-words">{messageContent}</p>
+        <p className="text-xs text-indigo-300 font-semibold mb-1">{display_name}</p>
+        <p className="text-sm break-words">{message}</p>
         <p className="text-xs text-gray-300/70 text-right mt-1">
           {new Date().toLocaleTimeString([], {
             hour: "2-digit",
@@ -55,12 +51,37 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ fullMessage }) => {
   );
 };
 
+type ChatRoomProps = {
+  onLeave?: () => void;
+  onStartVideo: (sessionId: string) => void;
+};
+
+type ChatMessage = {
+  message: string;
+  sender: string;
+  type: string;
+};
+
 const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
   const [message, setMessage] = useState<string>("");
-  const [chat, setChat] = useState<string[]>([]);
+  const [chat, setChat] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const ws = useRef<WebSocket | null>(null);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
+  const getUserDisplayName = () => {
+    const userStr = localStorage.getItem("user");
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        return user?.display_name || "Anonymous";
+      } catch (e) {
+        console.error("Failed to parse user from localStorage", e);
+        return "Anonymous";
+      }
+    }
+    return "Anonymous";
+  };
+  const myName = getUserDisplayName();
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -72,64 +93,81 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
   useEffect(() => {
     const accessToken = TokenService.getAccessToken();
     if (!accessToken) {
-      console.error("Authentication token not found.");
       if (onLeave) onLeave();
       return;
     }
-    const socketUrl = `${config.WS_URL}/ws/chat/random/?token=${accessToken}`;
-    const socket: WebSocket = new WebSocket(socketUrl);
-    ws.current = socket;
-    socket.onopen = () => setIsConnected(true);
-    socket.onmessage = (event: MessageEvent) => {
-      const data = JSON.parse(event.data);
-      console.log("WebSocket message type:", data.type);
-      switch (data.type) {
-        case "chat_message":
-        case "system_message":
-          setChat((prev) => [...prev, data.message]);
-          break;
 
-        case "video_initiated":
-          if (onStartVideo) {
-            onStartVideo(data.session_id);
-          }
-          break;
-        default:
-          console.warn("Received unknown WebSocket message type:", data.type);
-      }
-    };
+    const socketUrl = `${config.WS_URL}/ws/chat/random/?token=${accessToken}`;
+    const socket = new WebSocket(socketUrl);
+    ws.current = socket;
+
+    socket.onopen = () => setIsConnected(true);
     socket.onclose = () => {
       setIsConnected(false);
-      setChat((prev) => [...prev, "--- You have been disconnected. ---"]);
+      setChat((prev) => [
+        ...prev,
+        {
+          message: "--- You have been disconnected. ---",
+          sender: "System",
+          type: "system_message",
+        },
+      ]);
     };
 
     socket.onerror = (error) => console.error("WebSocket Error:", error);
 
-    return () => {
-      if (socket.readyState === WebSocket.OPEN) {
-        socket.close();
+    socket.onmessage = (event: MessageEvent) => {
+      const data = JSON.parse(event.data);
+      if (data.type === "chat_message" && data.sender === myName) {
+        return;
+      }
+      if (data.type === "chat_message" || data.type === "system_message") {
+        setChat((prev) => [
+          ...prev,
+          {
+            message: data.message,
+            sender: data.sender || "System",
+            type: data.type,
+          },
+        ]);
+      } else if (data.type === "video_initiated") {
+        if (onStartVideo) onStartVideo(data.session_id);
       }
     };
-  }, []);
 
-  const handleStartVideoClick = () => {
-    ws.current?.send(JSON.stringify({ type: "start_video" }));
-  };
+    return () => {
+      socket.onmessage = null;
+      if (socket.readyState === WebSocket.OPEN) socket.close();
+    };
+  }, [onStartVideo, onLeave, myName]);
 
   const sendMessage = () => {
-    if (
-      ws.current &&
-      ws.current.readyState === WebSocket.OPEN &&
-      message.trim()
-    ) {
+    if (ws.current?.readyState === WebSocket.OPEN && message.trim()) {
       ws.current.send(JSON.stringify({ type: "message", message: message }));
+      setChat((prev) => [
+        ...prev,
+        {
+          message: message,
+          sender: myName,
+          type: "chat_message",
+        },
+      ]);
       setMessage("");
     }
   };
 
+  const handleStartVideoClick = () => {
+    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type: "start_video" }));
+    } else {
+      console.error("Cannot start video: WebSocket is not connected.");
+    }
+  };
+
   return (
-    <div className="flex flex-col h-screen  text-white">
-      <header className="shadow-lg p-4 flex items-center justify-between z-10 border-b border-gray-700">
+    <div className="flex flex-col h-screen bg-black text-white">
+      <header className="shadow-lg p-4 flex items-center justify-between z-10 border-b border-gray-700 bg-black">
+        {/* Header content... (no changes) */}
         <div className="flex items-center">
           <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mr-4">
             <svg
@@ -178,7 +216,6 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
               Start Video
             </button>
           )}
-
           <button
             onClick={onLeave}
             className="px-4 py-2 cursor-pointer bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-colors text-sm flex items-center gap-2"
@@ -195,17 +232,25 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
           </button>
         </div>
       </header>
+
       <main
         ref={chatContainerRef}
         className="flex-1 overflow-y-auto p-4 md:p-6"
       >
         <div className="flex flex-col space-y-2 max-w-2xl mx-auto">
           {chat.map((msg, i) => (
-            <MessageBubble key={i} fullMessage={msg} />
+            <MessageBubble
+              key={i}
+              message={msg.message}
+              sender={msg.sender}
+              myName={myName}
+              type={msg.type}
+            />
           ))}
         </div>
       </main>
-      <footer className="p-3 md:p-4 border-t border-gray-700">
+
+      <footer className="p-3 md:p-4 border-t border-gray-700 bg-black">
         <div className="max-w-2xl mx-auto">
           <div className="flex items-center bg-gray-700 rounded-full p-2 shadow-inner">
             <input
