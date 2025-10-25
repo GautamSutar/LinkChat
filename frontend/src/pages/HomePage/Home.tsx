@@ -6,8 +6,6 @@ type Mode = "chat" | "video";
 const HomePage: React.FC = () => {
   const [mode, setMode] = useState<Mode>("chat");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const { isAuthenticated, logout } = useAuth();
-
   const handleStartVideo = useCallback((newSessionId: string) => {
     console.log("HomePage received session ID:", newSessionId);
     setSessionId(newSessionId);
