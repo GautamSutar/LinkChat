@@ -6,7 +6,7 @@ type Mode = "chat" | "video";
 const HomePage: React.FC = () => {
   const [mode, setMode] = useState<Mode>("chat");
   const [sessionId, setSessionId] = useState<string | null>(null);
-  const { isAuthenticated} = useAuth();
+  const { isAuthenticated } = useAuth();
 
   const handleStartVideo = useCallback((newSessionId: string) => {
     console.log("HomePage received session ID:", newSessionId);
@@ -27,10 +27,10 @@ const HomePage: React.FC = () => {
             className="font-bold text-white leading-tight break-words max-w-[90vw] mx-auto"
             style={{ fontSize: "clamp(2.5rem, 10vw, 6rem)" }}
           >
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-black to-white">
+            <span className="text-transparent font-extrabold bg-clip-text bg-gradient-to-r from-black to-white">
               Welco
             </span>
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-white to-white">
+            <span className="text-transparent font-extrabold bg-clip-text bg-gradient-to-r from-white to-white">
               me To{" "}
             </span>
             <span className="font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white to-gray-400">
