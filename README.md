@@ -4,9 +4,9 @@
 
 LinkChat is a full-stack web application designed to connect people from around the world for spontaneous conversations. It provides a platform for anonymous users to engage in real-time text chat and initiate secure, peer-to-peer video calls.
 
-![LinkChat Welcome](/landing.png)
-![LinkChat Chat](/chat.png)
-![LinkChat Video](/video.png)
+![LinkChat Welcome](frontend/public/landing.png)
+![LinkChat Chat](frontend/public/chat.png)
+![LinkChat Video](frontend/public/video.png)
 
 ## ✨ Features
 
