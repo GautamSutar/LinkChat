@@ -8,28 +8,27 @@ from user.models import User
 @database_sync_to_async
 def get_user(token_key: str):
     try:
+        print(
+            f"Attempting to validate token: {token_key[:15]}..."
+        )  # Log first 15 chars
         token = AccessToken(token_key)
-        user_id = token['user_id']
-        user = User.objects.get(id=user_id)
-        return user
-    except (InvalidToken, TokenError, User.DoesNotExist):
+        user_id = token.payload.get("user_id")
+        if user_id:
+            print(f"Token valid. User ID: {user_id}")
+            user = User.objects.get(id=user_id)
+            return user
+        print("Token valid, but no user_id found in payload.")
+        return AnonymousUser()
+    except Exception as e:  
+        print(f"!!! TOKEN VALIDATION FAILED: {e}")
         return AnonymousUser()
 
-
 class TokenAuthMiddleware:
-    """
-    Custom WebSocket authentication middleware that authenticates users
-    using a JWT token passed in the query string.
-    """
-
     def __init__(self, inner):
-        # Store the ASGI application we're wrapping
         self.inner = inner
-
     async def __call__(self, scope, receive, send):
         query_string = parse_qs(scope.get("query_string", b"").decode("utf-8"))
         token = query_string.get("token")
-
         if token:
             scope["user"] = await get_user(token[0])
         else:

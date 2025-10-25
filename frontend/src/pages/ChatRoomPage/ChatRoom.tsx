@@ -38,7 +38,9 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
       <div
         className={`px-4 py-2 rounded-lg shadow-md ${bubbleColor} ${bubbleRounding}`}
       >
-        <p className="text-xs text-indigo-300 font-semibold mb-1">{display_name}</p>
+        <p className="text-xs text-indigo-300 font-semibold mb-1">
+          {display_name}
+        </p>
         <p className="text-sm break-words">{message}</p>
         <p className="text-xs text-gray-300/70 text-right mt-1">
           {new Date().toLocaleTimeString([], {
@@ -131,6 +133,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
           },
         ]);
       } else if (data.type === "video_initiated") {
+        console.log("Video session started with ID:", data.session_id);
         if (onStartVideo) onStartVideo(data.session_id);
       }
     };
@@ -158,6 +161,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
 
   const handleStartVideoClick = () => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
+      console.log("Sending 'start_video' message to server.");
       ws.current.send(JSON.stringify({ type: "start_video" }));
     } else {
       console.error("Cannot start video: WebSocket is not connected.");

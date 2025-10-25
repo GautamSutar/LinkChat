@@ -17,6 +17,9 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
+  // --- THE FIX: Add a ref to prevent negotiation race conditions ("glare") ---
+  const isNegotiating = useRef(false);
+
   useEffect(() => {
     if (!sessionId) return;
 
@@ -45,13 +48,19 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
       const data = JSON.parse(event.data);
       switch (data.type) {
         case "partner_ready":
-          setStatus("Partner connected. Preparing video...");
+          if (isNegotiating.current) break;
+          isNegotiating.current = true;
+          setStatus("Partner connected. Creating offer...");
           createAndSendOffer();
           break;
         case "video_offer":
+          if (isNegotiating.current) break;
+          isNegotiating.current = true;
+          setStatus("Offer received. Creating answer...");
           handleOffer(data.sdp);
           break;
         case "video_answer":
+          setStatus("Answer received. Connecting...");
           handleAnswer(data.sdp);
           break;
         case "ice_candidate":
@@ -64,59 +73,77 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
     socket.onerror = () => setStatus("An error occurred.");
 
     return () => {
+      isNegotiating.current = false;
       localStream.current?.getTracks().forEach((track) => track.stop());
       peerConnection.current?.close();
-      if (socket.readyState === WebSocket.OPEN) socket.close();
+      if (ws.current?.readyState === WebSocket.OPEN) {
+        ws.current.close();
+      }
     };
   }, [sessionId]);
 
   const createPeerConnection = (): RTCPeerConnection => {
+    if (peerConnection.current) {
+      return peerConnection.current;
+    }
+
     const pc = new RTCPeerConnection(ICE_SERVERS);
-    localStream.current
-      ?.getTracks()
-      .forEach((track) => pc.addTrack(track, localStream.current!));
+    localStream.current?.getTracks().forEach((track) => {
+      if (localStream.current) {
+        pc.addTrack(track, localStream.current);
+      }
+    });
     pc.ontrack = (event) => {
-      if (remoteVideoRef.current)
+      if (remoteVideoRef.current && event.streams[0]) {
         remoteVideoRef.current.srcObject = event.streams[0];
-      setStatus("Connected!");
+        setStatus("Connected!");
+      }
     };
     pc.onicecandidate = (event) => {
-      if (event.candidate) {
-        ws.current?.send(
+      if (event.candidate && ws.current?.readyState === WebSocket.OPEN) {
+        ws.current.send(
           JSON.stringify({ type: "ice_candidate", candidate: event.candidate })
         );
       }
     };
+
+    peerConnection.current = pc;
     return pc;
   };
 
   const createAndSendOffer = async () => {
-    peerConnection.current = createPeerConnection();
-    const offer = await peerConnection.current.createOffer();
-    await peerConnection.current.setLocalDescription(offer);
-    ws.current?.send(JSON.stringify({ type: "video_offer", sdp: offer }));
+    const pc = createPeerConnection();
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type: "video_offer", sdp: offer }));
+    }
   };
 
   const handleOffer = async (sdp: RTCSessionDescriptionInit) => {
-    peerConnection.current = createPeerConnection();
-    await peerConnection.current.setRemoteDescription(
-      new RTCSessionDescription(sdp)
-    );
-    const answer = await peerConnection.current.createAnswer();
-    await peerConnection.current.setLocalDescription(answer);
-    ws.current?.send(JSON.stringify({ type: "video_answer", sdp: answer }));
+    const pc = createPeerConnection();
+    await pc.setRemoteDescription(new RTCSessionDescription(sdp));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type: "video_answer", sdp: answer }));
+    }
   };
 
   const handleAnswer = async (sdp: RTCSessionDescriptionInit) => {
-    await peerConnection.current?.setRemoteDescription(
-      new RTCSessionDescription(sdp)
-    );
+    if (peerConnection.current) {
+      await peerConnection.current.setRemoteDescription(
+        new RTCSessionDescription(sdp)
+      );
+    }
   };
 
   const handleIceCandidate = async (candidate: RTCIceCandidateInit) => {
-    await peerConnection.current?.addIceCandidate(
-      new RTCIceCandidate(candidate)
-    );
+    if (peerConnection.current && candidate) {
+      await peerConnection.current.addIceCandidate(
+        new RTCIceCandidate(candidate)
+      );
+    }
   };
 
   return (

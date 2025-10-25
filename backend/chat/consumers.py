@@ -51,7 +51,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
         elif message_type == "start_video":
-            session_id = f"video_{self.room_name}"
+            session_id = f"{self.room_name}"
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
