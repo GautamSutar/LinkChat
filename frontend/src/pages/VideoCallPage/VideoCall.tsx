@@ -16,12 +16,12 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
   const localStream = useRef<MediaStream | null>(null);
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
-
   const isNegotiating = useRef(false);
+  
+  const iceCandidateBuffer = useRef<RTCIceCandidate[]>([]);
 
   useEffect(() => {
     if (!sessionId) return;
-
     const accessToken = TokenService.getAccessToken();
     const socketUrl = `${config.WS_URL}/ws/video/${sessionId}/?token=${accessToken}`;
     const socket = new WebSocket(socketUrl);
@@ -73,6 +73,7 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
 
     return () => {
       isNegotiating.current = false;
+      iceCandidateBuffer.current = [];
       localStream.current?.getTracks().forEach((track) => track.stop());
       peerConnection.current?.close();
       if (ws.current?.readyState === WebSocket.OPEN) {
@@ -85,7 +86,6 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
     if (peerConnection.current) {
       return peerConnection.current;
     }
-
     const pc = new RTCPeerConnection(ICE_SERVERS);
     localStream.current?.getTracks().forEach((track) => {
       if (localStream.current) {
@@ -105,7 +105,6 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
         );
       }
     };
-
     peerConnection.current = pc;
     return pc;
   };
@@ -118,12 +117,16 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
       ws.current.send(JSON.stringify({ type: "video_offer", sdp: offer }));
     }
   };
-
   const handleOffer = async (sdp: RTCSessionDescriptionInit) => {
     const pc = createPeerConnection();
     await pc.setRemoteDescription(new RTCSessionDescription(sdp));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
+    iceCandidateBuffer.current.forEach((candidate) =>
+      pc.addIceCandidate(candidate)
+    );
+    iceCandidateBuffer.current = [];
+
     if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({ type: "video_answer", sdp: answer }));
     }
@@ -134,39 +137,43 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
       await peerConnection.current.setRemoteDescription(
         new RTCSessionDescription(sdp)
       );
+      iceCandidateBuffer.current.forEach((candidate) =>
+        peerConnection.current!.addIceCandidate(candidate)
+      );
+      iceCandidateBuffer.current = []; // Clear the buffer
     }
   };
-
   const handleIceCandidate = async (candidate: RTCIceCandidateInit) => {
-    if (peerConnection.current && candidate) {
-      await peerConnection.current.addIceCandidate(
-        new RTCIceCandidate(candidate)
-      );
+    const iceCandidate = new RTCIceCandidate(candidate);
+    if (peerConnection.current?.remoteDescription) {
+      await peerConnection.current.addIceCandidate(iceCandidate);
+    } else {
+      iceCandidateBuffer.current.push(iceCandidate);
     }
   };
 
   return (
-    <div className="flex flex-col h-screen  text-white p-4">
-      <header className="flex justify-between items-center mb-4 pb-4 border-b border-gray-700">
+    <div className="flex flex-col h-screen text-white p-3 sm:p-4 overflow-hidden">
+      <header className="flex flex-col sm:flex-row justify-between items-center mb-4 pb-4 border-b border-gray-700 gap-3 sm:gap-0 text-center sm:text-left">
         <div>
-          <h1 className="text-2xl font-bold">Video Call</h1>
-          <p className="text-sm text-gray-400">{status}</p>
+          <h1 className="text-xl sm:text-2xl font-bold">Video Call</h1>
+          <p className="text-xs sm:text-sm text-gray-400">{status}</p>
         </div>
         <button
           onClick={onLeaveVideo}
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold"
+          className="px-3 sm:px-4 cursor-pointer py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold text-sm sm:text-base w-full sm:w-auto"
         >
           End Call
         </button>
       </header>
-      <main className="relative flex-1 w-full h-full bg-black rounded-lg">
+      <main className="relative flex-1 w-full h-full bg-black rounded-lg overflow-hidden flex justify-center items-center">
         <video
           ref={remoteVideoRef}
           autoPlay
           playsInline
           className="w-full h-full object-cover rounded-lg"
         />
-        <div className="absolute w-1/4 max-w-[250px] bottom-4 right-4 border-2 border-gray-700 rounded-lg overflow-hidden shadow-lg">
+        <div className="absolute w-1/3 sm:w-1/4 max-w-[150px] sm:max-w-[250px] bottom-2 sm:bottom-4 right-2 sm:right-4 border-2 border-gray-700 rounded-lg overflow-hidden shadow-lg">
           <video
             ref={localVideoRef}
             autoPlay
