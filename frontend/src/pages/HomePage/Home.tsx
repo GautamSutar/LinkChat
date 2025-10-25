@@ -1,10 +1,13 @@
 import React, { useState, useCallback } from "react";
 import ChatRoom from "../ChatRoomPage/ChatRoom";
 import VideoCall from "../VideoCallPage/VideoCall";
+import { useAuth } from "../../hooks/useAuth";
 type Mode = "chat" | "video";
 const HomePage: React.FC = () => {
   const [mode, setMode] = useState<Mode>("chat");
   const [sessionId, setSessionId] = useState<string | null>(null);
+  const { isAuthenticated} = useAuth();
+
   const handleStartVideo = useCallback((newSessionId: string) => {
     console.log("HomePage received session ID:", newSessionId);
     setSessionId(newSessionId);
