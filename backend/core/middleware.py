@@ -10,7 +10,7 @@ def get_user(token_key: str):
     try:
         print(
             f"Attempting to validate token: {token_key[:15]}..."
-        )  # Log first 15 chars
+        ) 
         token = AccessToken(token_key)
         user_id = token.payload.get("user_id")
         if user_id:
@@ -19,7 +19,7 @@ def get_user(token_key: str):
             return user
         print("Token valid, but no user_id found in payload.")
         return AnonymousUser()
-    except Exception as e:  
+    except Exception as e:
         print(f"!!! TOKEN VALIDATION FAILED: {e}")
         return AnonymousUser()
 

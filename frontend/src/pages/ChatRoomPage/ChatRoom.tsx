@@ -17,8 +17,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const isYou = sender === myName;
   if (type === "system_message" && !isYou) {
     return (
-      <div className="self-center my-3">
-        <p className="text-xs text-gray-400 italic px-3 py-1 bg-gray-800 rounded-full">
+      <div className="self-center my-2 sm:my-3">
+        <p className="text-[10px] sm:text-xs text-gray-400 italic px-2 sm:px-3 py-1 bg-gray-800 rounded-full">
           {message}
         </p>
       </div>
@@ -31,18 +31,19 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({
   const bubbleRounding = isYou
     ? "rounded-b-xl rounded-tl-xl"
     : "rounded-b-xl rounded-tr-xl";
-
   const display_name = isYou ? "You" : sender;
   return (
-    <div className={`flex flex-col ${alignClass} max-w-sm md:max-w-md my-1`}>
+    <div
+      className={`flex flex-col ${alignClass} max-w-[85vw] sm:max-w-sm md:max-w-md my-1`}
+    >
       <div
-        className={`px-4 py-2 rounded-lg shadow-md ${bubbleColor} ${bubbleRounding}`}
+        className={`px-3 sm:px-4 py-2 rounded-lg shadow-md ${bubbleColor} ${bubbleRounding}`}
       >
-        <p className="text-xs text-indigo-300 font-semibold mb-1">
+        <p className="text-[10px] sm:text-xs text-indigo-300 font-semibold mb-1">
           {display_name}
         </p>
         <p className="text-sm break-words">{message}</p>
-        <p className="text-xs text-gray-300/70 text-right mt-1">
+        <p className="text-[10px] sm:text-xs text-gray-300/70 text-right mt-1">
           {new Date().toLocaleTimeString([], {
             hour: "2-digit",
             minute: "2-digit",
@@ -98,11 +99,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
       if (onLeave) onLeave();
       return;
     }
-
     const socketUrl = `${config.WS_URL}/ws/chat/random/?token=${accessToken}`;
     const socket = new WebSocket(socketUrl);
     ws.current = socket;
-
     socket.onopen = () => setIsConnected(true);
     socket.onclose = () => {
       setIsConnected(false);
@@ -115,9 +114,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
         },
       ]);
     };
-
     socket.onerror = (error) => console.error("WebSocket Error:", error);
-
     socket.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
       if (data.type === "chat_message" && data.sender === myName) {
@@ -133,11 +130,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
           },
         ]);
       } else if (data.type === "video_initiated") {
-        console.log("Video session started with ID:", data.session_id);
         if (onStartVideo) onStartVideo(data.session_id);
       }
     };
-
     return () => {
       socket.onmessage = null;
       if (socket.readyState === WebSocket.OPEN) socket.close();
@@ -161,21 +156,17 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
 
   const handleStartVideoClick = () => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      console.log("Sending 'start_video' message to server.");
       ws.current.send(JSON.stringify({ type: "start_video" }));
-    } else {
-      console.error("Cannot start video: WebSocket is not connected.");
     }
   };
 
   return (
-    <div className="flex flex-col h-screen bg-black text-white">
-      <header className="shadow-lg p-4 flex items-center justify-between z-10 border-b border-gray-700 bg-black">
-        {/* Header content... (no changes) */}
-        <div className="flex items-center">
-          <div className="w-12 h-12 bg-gray-700 rounded-full flex items-center justify-center mr-4">
+    <div className="flex flex-col h-screen bg-black text-white overflow-x-hidden">
+      <header className="shadow-lg p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between z-10 border-b border-gray-700 bg-black gap-3 sm:gap-0">
+        <div className="flex items-center w-full sm:w-auto justify-center sm:justify-start">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-700 rounded-full flex items-center justify-center mr-3 sm:mr-4">
             <svg
-              className="w-8 h-8 text-indigo-400"
+              className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-400"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -190,27 +181,29 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
             </svg>
           </div>
           <div>
-            <h1 className="text-xl font-bold text-gray-100">Stranger</h1>
-            <div className="flex items-center">
+            <h1 className="text-lg sm:text-xl font-bold text-gray-100">
+              Stranger
+            </h1>
+            <div className="flex items-center justify-center sm:justify-start">
               <div
-                className={`w-2.5 h-2.5 rounded-full mr-2 transition-colors ${
+                className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full mr-2 transition-colors ${
                   isConnected ? "bg-green-400" : "bg-red-500"
                 }`}
               ></div>
-              <p className="text-sm text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-400">
                 {isConnected ? "Online" : "Connecting..."}
               </p>
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex items-center justify-center sm:justify-end gap-2 sm:gap-3 w-full sm:w-auto">
           {isConnected && (
             <button
               onClick={handleStartVideoClick}
-              className="px-4 cursor-pointer py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-colors text-sm flex items-center gap-2"
+              className="px-3 sm:px-4 py-1.5 sm:py-2 bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-colors text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
             >
               <svg
-                className="w-4 h-4"
+                className="w-3.5 h-3.5 sm:w-4 sm:h-4"
                 fill="currentColor"
                 viewBox="0 0 20 20"
                 xmlns="http://www.w3.org/2000/svg"
@@ -222,10 +215,10 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
           )}
           <button
             onClick={onLeave}
-            className="px-4 py-2 cursor-pointer bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-colors text-sm flex items-center gap-2"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-colors text-xs sm:text-sm flex items-center gap-1 sm:gap-2"
           >
             <svg
-              className="w-4 h-4"
+              className="w-3.5 h-3.5 sm:w-4 sm:h-4"
               fill="currentColor"
               viewBox="0 0 20 20"
               xmlns="http://www.w3.org/2000/svg"
@@ -239,9 +232,9 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
 
       <main
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-4 md:p-6"
+        className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6"
       >
-        <div className="flex flex-col space-y-2 max-w-2xl mx-auto">
+        <div className="flex flex-col space-y-2 max-w-full sm:max-w-2xl mx-auto">
           {chat.map((msg, i) => (
             <MessageBubble
               key={i}
@@ -254,16 +247,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
         </div>
       </main>
 
-      <footer className="p-3 md:p-4 border-t border-gray-700 bg-black">
-        <div className="max-w-2xl mx-auto">
-          <div className="flex items-center bg-gray-700 rounded-full p-2 shadow-inner">
+      <footer className="p-2 sm:p-3 md:p-4 border-t border-gray-700 bg-black">
+        <div className="max-w-full sm:max-w-2xl mx-auto">
+          <div className="flex items-center bg-gray-700 rounded-full p-1.5 sm:p-2 shadow-inner">
             <input
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyPress={(e) => {
                 if (e.key === "Enter") sendMessage();
               }}
-              className="flex-1 px-4 py-2 bg-transparent border-none text-gray-200 focus:outline-none placeholder-gray-500"
+              className="flex-1 px-3 sm:px-4 py-1.5 sm:py-2 bg-transparent border-none text-gray-200 focus:outline-none placeholder-gray-500 text-sm sm:text-base"
               placeholder={
                 isConnected ? "Type a message..." : "Waiting to connect..."
               }
@@ -271,7 +264,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
             />
             <button
               onClick={sendMessage}
-              className={`w-10 h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full transition-all duration-300 transform ${
+              className={`w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full transition-all duration-300 transform ${
                 isConnected && message.trim()
                   ? "bg-indigo-600 hover:bg-indigo-500 text-white scale-100"
                   : "bg-gray-600 text-gray-400 scale-90 cursor-not-allowed"
@@ -279,7 +272,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
               disabled={!isConnected || !message.trim()}
             >
               <svg
-                className="w-6 h-6 transform rotate-90"
+                className="w-5 h-5 sm:w-6 sm:h-6 transform rotate-90"
                 fill="currentColor"
                 viewBox="0 0 20 20"
                 xmlns="http://www.w3.org/2000/svg"

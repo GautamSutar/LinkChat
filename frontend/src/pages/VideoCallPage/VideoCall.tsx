@@ -17,7 +17,6 @@ const VideoCall: React.FC<VideoCallProps> = ({ sessionId, onLeaveVideo }) => {
   const localVideoRef = useRef<HTMLVideoElement>(null);
   const remoteVideoRef = useRef<HTMLVideoElement>(null);
 
-  // --- THE FIX: Add a ref to prevent negotiation race conditions ("glare") ---
   const isNegotiating = useRef(false);
 
   useEffect(() => {

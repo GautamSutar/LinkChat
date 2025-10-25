@@ -19,8 +19,8 @@ const Navbar: React.FC = () => {
                 // This function dynamically applies classes
                 className={({ isActive }) =>
                   `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                    ? "bg-gray-900 text-white"
-                    : "text-gray-300 hover:bg-gray-900 hover:text-white" // Style for inactive links
+                    ? "bg-gray-500 text-white"
+                    : "text-gray-300 hover:bg-gray-700 hover:text-white" // Style for inactive links
                   }`
                 }
               >
@@ -31,8 +31,8 @@ const Navbar: React.FC = () => {
                 to="/features"
                 className={({ isActive }) =>
                   `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                    ? "bg-gray-900 text-white"
-                    : "text-gray-300 hover:bg-gray-900 hover:text-white"
+                    ? "bg-gray-500 text-white"
+                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
                   }`
                 }
               >
