@@ -26,17 +26,16 @@ const Navbar: React.FC = () => {
               >
                 Home
               </NavLink>
-              {/* Example of another NavLink */}
               <NavLink
-                to="/features"
+                to="/game"
                 className={({ isActive }) =>
-                  `px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${isActive
-                    ? "bg-white/10 text-white shadow-sm"
-                    : "text-gray-400 hover:bg-white/5 hover:text-white"
+                  `px-4 py-2 rounded-full text-sm font-bold transition-all duration-300 ${isActive
+                    ? "bg-indigo-600/20 text-indigo-400 shadow-[0_0_15px_rgba(79,70,229,0.5)] border border-indigo-500/50"
+                    : "text-gray-400 hover:bg-indigo-600/10 hover:text-indigo-300 border border-transparent hover:border-indigo-500/30"
                   }`
                 }
               >
-                Features
+                🎮 Play Game
               </NavLink>
             </div>
           </div>

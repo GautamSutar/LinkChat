@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     "chat",
     "video",
     "subscriptions",
+    "game",
 ]
 
 REST_FRAMEWORK = {
