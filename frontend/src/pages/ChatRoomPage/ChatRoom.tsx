@@ -1,57 +1,14 @@
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import config from "../../config.ts";
 import TokenService from "../../service/token.service";
-type MessageBubbleProps = {
+
+// ─────────────────────────────────────────────
+// Types
+// ─────────────────────────────────────────────
+type ChatMessage = {
   message: string;
   sender: string;
-  myName: string;
   type: string;
-};
-
-const MessageBubble: React.FC<MessageBubbleProps> = ({
-  message,
-  sender,
-  myName,
-  type,
-}) => {
-  const isYou = sender === myName;
-  if (type === "system_message" && !isYou) {
-    return (
-      <div className="self-center my-2 sm:my-3">
-        <p className="text-[10px] sm:text-xs text-gray-400 italic px-2 sm:px-3 py-1 bg-gray-800 rounded-full text-center">
-          {message}
-        </p>
-      </div>
-    );
-  }
-  const alignClass = isYou ? "self-end" : "self-start";
-  const bubbleColor = isYou
-    ? "bg-indigo-600 text-white"
-    : "bg-gray-700 text-gray-200";
-  const bubbleRounding = isYou
-    ? "rounded-b-xl rounded-tl-xl"
-    : "rounded-b-xl rounded-tr-xl";
-  const display_name = isYou ? "You" : sender;
-  return (
-    <div
-      className={`flex flex-col ${alignClass} max-w-[85%] sm:max-w-sm md:max-w-md my-1`}
-    >
-      <div
-        className={`px-3 sm:px-4 py-2 rounded-lg shadow-md ${bubbleColor} ${bubbleRounding}`}
-      >
-        <p className="text-[10px] sm:text-xs text-indigo-300 font-semibold mb-1">
-          {display_name}
-        </p>
-        <p className="text-sm sm:text-base break-words">{message}</p>
-        <p className="text-[10px] sm:text-xs text-gray-300/70 text-right mt-1">
-          {new Date().toLocaleTimeString([], {
-            hour: "2-digit",
-            minute: "2-digit",
-          })}
-        </p>
-      </div>
-    </div>
-  );
 };
 
 type ChatRoomProps = {
@@ -59,40 +16,104 @@ type ChatRoomProps = {
   onStartVideo: (sessionId: string) => void;
 };
 
-type ChatMessage = {
-  message: string;
-  sender: string;
-  type: string;
+// ─────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────
+const getMyName = (): string => {
+  const raw = localStorage.getItem("user");
+  if (!raw) return "You";
+  try {
+    const u = JSON.parse(raw);
+    return u?.display_name || "You";
+  } catch {
+    return "You";
+  }
 };
 
+const getInitials = (name: string) =>
+  name
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+
+// ─────────────────────────────────────────────
+// Message Bubble
+// ─────────────────────────────────────────────
+const MessageBubble: React.FC<{ msg: ChatMessage; myName: string }> = ({
+  msg,
+  myName,
+}) => {
+  const isMe = msg.sender === myName;
+
+  if (msg.type === "system_message") {
+    return (
+      <div className="flex justify-center my-3">
+        <span className="text-xs px-4 py-1.5 rounded-full bg-white/5 text-gray-400 border border-white/10 backdrop-blur-sm">
+          {msg.message}
+        </span>
+      </div>
+    );
+  }
+
+  return (
+    <div className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+      {/* Avatar */}
+      <div
+        className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold shadow-md ${
+          isMe
+            ? "bg-indigo-600 text-white"
+            : "bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
+        }`}
+      >
+        {getInitials(isMe ? myName : msg.sender)}
+      </div>
+
+      {/* Bubble */}
+      <div className={`flex flex-col max-w-[72%] ${isMe ? "items-end" : "items-start"}`}>
+        <span className="text-[10px] text-gray-500 mb-1 px-1 font-medium">
+          {isMe ? "You" : msg.sender}
+        </span>
+        <div
+          className={`px-4 py-2.5 rounded-2xl shadow-sm text-sm leading-relaxed break-words ${
+            isMe
+              ? "bg-indigo-600 text-white rounded-br-sm"
+              : "bg-gray-800 text-gray-100 rounded-bl-sm border border-white/5"
+          }`}
+        >
+          {msg.message}
+        </div>
+        <span className="text-[10px] text-gray-600 mt-1 px-1">
+          {new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+        </span>
+      </div>
+    </div>
+  );
+};
+
+// ─────────────────────────────────────────────
+// ChatRoom
+// ─────────────────────────────────────────────
 const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
-  const [message, setMessage] = useState<string>("");
+  const [message, setMessage] = useState("");
   const [chat, setChat] = useState<ChatMessage[]>([]);
-  const [isConnected, setIsConnected] = useState<boolean>(false);
+  const [isConnected, setIsConnected] = useState(false);
+  const [partnerJoined, setPartnerJoined] = useState(false);
+  const [partnerName, setPartnerName] = useState<string | null>(null);
   const ws = useRef<WebSocket | null>(null);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
-  const getUserDisplayName = () => {
-    const userStr = localStorage.getItem("user");
-    if (userStr) {
-      try {
-        const user = JSON.parse(userStr);
-        return user?.display_name || "Anonymous";
-      } catch (e) {
-        console.error("Failed to parse user from localStorage", e);
-        return "Anonymous";
-      }
-    }
-    return "Anonymous";
-  };
-  const myName = getUserDisplayName();
+  const inputRef = useRef<HTMLInputElement | null>(null);
+  const myName = getMyName();
 
+  // Auto-scroll on new message
   useEffect(() => {
     if (chatContainerRef.current) {
-      chatContainerRef.current.scrollTop =
-        chatContainerRef.current.scrollHeight;
+      chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [chat]);
 
+  // WebSocket connection
   useEffect(() => {
     const accessToken = TokenService.getAccessToken();
     if (!accessToken) {
@@ -107,34 +128,48 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
     socket.onopen = () => setIsConnected(true);
     socket.onclose = () => {
       setIsConnected(false);
+      setPartnerJoined(false);
+      setPartnerName(null);
       setChat((prev) => [
         ...prev,
-        {
-          message: "--- You have been disconnected. ---",
-          sender: "System",
-          type: "system_message",
-        },
+        { message: "You have been disconnected.", sender: "System", type: "system_message" },
       ]);
     };
 
-    socket.onerror = (error) => console.error("WebSocket Error:", error);
+    socket.onerror = (e) => console.error("WebSocket Error:", e);
 
     socket.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
-      if (data.type === "chat_message" && data.sender === myName) {
-        return;
-      }
-      if (data.type === "chat_message" || data.type === "system_message") {
+
+      if (data.type === "partner_joined") {
+        setPartnerJoined(true);
+        setPartnerName(data.partner_name || "Stranger");
         setChat((prev) => [
           ...prev,
-          {
-            message: data.message,
-            sender: data.sender || "System",
-            type: data.type,
-          },
+          { message: data.message, sender: "System", type: "system_message" },
+        ]);
+      } else if (data.type === "partner_left") {
+        setPartnerJoined(false);
+        setPartnerName(null);
+        setChat((prev) => [
+          ...prev,
+          { message: data.message, sender: "System", type: "system_message" },
+        ]);
+      } else if (data.type === "chat_message" && data.sender !== myName) {
+        const msgText =
+          typeof data.message === "object" ? JSON.stringify(data.message) : data.message;
+        setChat((prev) => [
+          ...prev,
+          { message: msgText, sender: data.sender || "Stranger", type: "chat_message" },
+        ]);
+      } else if (data.type === "system_message") {
+        const msgText =
+          typeof data.message === "object" ? JSON.stringify(data.message) : data.message;
+        setChat((prev) => [
+          ...prev,
+          { message: msgText, sender: "System", type: "system_message" },
         ]);
       } else if (data.type === "video_initiated") {
-        console.log("Video session started with ID:", data.session_id);
         if (onStartVideo) onStartVideo(data.session_id);
       }
     };
@@ -147,150 +182,187 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
 
   const sendMessage = () => {
     if (ws.current?.readyState === WebSocket.OPEN && message.trim()) {
-      ws.current.send(JSON.stringify({ type: "message", message: message }));
+      ws.current.send(JSON.stringify({ type: "message", message }));
       setChat((prev) => [
         ...prev,
-        {
-          message: message,
-          sender: myName,
-          type: "chat_message",
-        },
+        { message, sender: myName, type: "chat_message" },
       ]);
       setMessage("");
+      inputRef.current?.focus();
     }
   };
 
-  const handleStartVideoClick = () => {
-    if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      console.log("Sending 'start_video' message to server.");
+  const handleStartVideo = () => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
       ws.current.send(JSON.stringify({ type: "start_video" }));
-    } else {
-      console.error("Cannot start video: WebSocket is not connected.");
     }
   };
+
+  const handleStartVoice = () => {
+    if (ws.current?.readyState === WebSocket.OPEN) {
+      ws.current.send(JSON.stringify({ type: "start_voice" }));
+    }
+  };
+
+  // ─── Header Status Pill ─────────────────────
+  const StatusPill = () => (
+    <div className="flex items-center gap-1.5">
+      <span
+        className={`w-2 h-2 rounded-full ${
+          partnerJoined ? "bg-emerald-400 animate-pulse" : isConnected ? "bg-yellow-400 animate-pulse" : "bg-gray-600"
+        }`}
+      />
+      <span className="text-xs text-gray-400 font-medium">
+        {partnerJoined ? "Connected" : isConnected ? "Waiting..." : "Disconnected"}
+      </span>
+    </div>
+  );
 
   return (
-    <div className="flex flex-col h-screen bg-black text-white">
-      <header className="shadow-lg p-3 sm:p-4 flex flex-col sm:flex-row items-center justify-between z-10 border-b border-gray-700 bg-black gap-3 sm:gap-0 text-center sm:text-left">
-        <div className="flex items-center justify-center sm:justify-start">
-          <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gray-700 rounded-full flex items-center justify-center mr-3 sm:mr-4">
-            <svg
-              className="w-6 h-6 sm:w-8 sm:h-8 text-indigo-400"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+    <div className="flex flex-col h-screen bg-[#0d0d0d]">
+      {/* ─── Header ─────────────────────────────── */}
+      <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/8 bg-[#111] backdrop-blur supports-[backdrop-filter]:bg-[#111]/80 z-10 shrink-0">
+        {/* Left: Avatar + Name + Status */}
+        <div className="flex items-center gap-3">
+          <div className="relative">
+            <div
+              className={`w-10 h-10 rounded-full flex items-center justify-center font-bold text-sm shadow-lg ${
+                partnerJoined
+                  ? "bg-gradient-to-br from-emerald-500 to-teal-600 text-white"
+                  : "bg-gray-800 text-gray-500"
+              }`}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M5.121 17.804A13.937 13.937 0 0112 16c2.5 0 4.847.655 6.879 1.804M15 10a3 3 0 11-6 0 3 3 0 016 0zm6 2a9 9 0 11-18 0 9 9 0 0118 0z"
-              />
-            </svg>
+              {partnerJoined && partnerName ? getInitials(partnerName) : "?"}
+            </div>
+            {partnerJoined && (
+              <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-400 border-2 border-[#111] rounded-full" />
+            )}
           </div>
           <div>
-            <h1 className="text-lg sm:text-xl font-bold text-gray-100">
-              Stranger
-            </h1>
-            <div className="flex items-center justify-center sm:justify-start">
-              <div
-                className={`w-2 h-2 sm:w-2.5 sm:h-2.5 rounded-full mr-2 transition-colors ${
-                  isConnected ? "bg-green-400" : "bg-red-500"
-                }`}
-              ></div>
-              <p className="text-xs sm:text-sm text-gray-400">
-                {isConnected ? "Online" : "Connecting..."}
-              </p>
+            <p className="text-sm font-semibold text-gray-100 leading-none">
+              {partnerJoined && partnerName ? partnerName : "Stranger"}
+            </p>
+            <div className="mt-0.5">
+              <StatusPill />
             </div>
           </div>
         </div>
-        <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto justify-center sm:justify-end">
-          {isConnected && (
-            <button
-              onClick={handleStartVideoClick}
-              className="px-3 sm:px-4 py-2 cursor-pointer bg-green-600 hover:bg-green-700 rounded-lg font-semibold transition-colors text-xs sm:text-sm flex items-center gap-2 w-full sm:w-auto justify-center"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
+
+        {/* Right: Call Actions */}
+        <div className="flex items-center gap-2">
+          {partnerJoined && (
+            <>
+              {/* Voice Call */}
+              <button
+                onClick={handleStartVoice}
+                title="Start voice call"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-800 hover:bg-emerald-700 text-gray-300 hover:text-white transition-all duration-200 hover:scale-110 shadow"
               >
-                <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 001.553.832l3-2a1 1 0 000-1.664l-3-2z" />
-              </svg>
-              Start Video
-            </button>
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
+                </svg>
+              </button>
+
+              {/* Video Call */}
+              <button
+                onClick={handleStartVideo}
+                title="Start video call"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-800 hover:bg-indigo-700 text-gray-300 hover:text-white transition-all duration-200 hover:scale-110 shadow"
+              >
+                <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
+                </svg>
+              </button>
+            </>
           )}
+
+          {/* Leave */}
           <button
             onClick={onLeave}
-            className="px-3 sm:px-4 cursor-pointer py-2 bg-red-600 hover:bg-red-700 rounded-lg font-semibold transition-colors text-xs sm:text-sm flex items-center gap-2 w-full sm:w-auto justify-center"
+            title="Leave chat"
+            className="px-3 py-1.5 cursor-pointer rounded-full bg-red-600/20 hover:bg-red-600 text-red-400 hover:text-white text-xs font-semibold transition-all duration-200 border border-red-600/30 hover:border-red-600"
           >
-            <svg
-              className="w-4 h-4"
-              fill="currentColor"
-              viewBox="0 0 20 20"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path d="M9 12h6a1 1 0 010 2H9a1 1 0 010-2zm-3 0a1 1 0 000 2h.01a1 1 0 100-2H6z" />
-            </svg>
             Leave
           </button>
         </div>
       </header>
 
+      {/* ─── Chat Body ───────────────────────────── */}
       <main
         ref={chatContainerRef}
-        className="flex-1 overflow-y-auto p-3 sm:p-4 md:p-6"
+        className="flex-1 overflow-y-auto px-4 sm:px-6 py-4 space-y-1 relative scroll-smooth"
       >
-        <div className="flex flex-col space-y-2 max-w-full sm:max-w-2xl mx-auto">
-          {chat.map((msg, i) => (
-            <MessageBubble
-              key={i}
-              message={msg.message}
-              sender={msg.sender}
-              myName={myName}
-              type={msg.type}
-            />
-          ))}
-        </div>
+        {/* Connecting Overlay */}
+        {!partnerJoined && isConnected && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#0d0d0d]/80 backdrop-blur-sm z-10">
+            <div className="flex flex-col items-center gap-4 text-center px-6">
+              <div className="relative">
+                <div className="w-16 h-16 rounded-full border-2 border-indigo-500/30 animate-ping absolute inset-0" />
+                <div className="w-16 h-16 rounded-full bg-indigo-600/20 flex items-center justify-center relative">
+                  <svg className="w-7 h-7 text-indigo-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 8h2a2 2 0 012 2v6a2 2 0 01-2 2h-2v4l-4-4H9a1.994 1.994 0 01-1.414-.586m0 0L11 14h4a2 2 0 002-2V6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2v4l.586-.586z" />
+                  </svg>
+                </div>
+              </div>
+              <div>
+                <p className="text-white font-semibold text-lg">Finding a stranger…</p>
+                <p className="text-gray-500 text-sm mt-1">You'll be connected with a random person shortly.</p>
+              </div>
+              <div className="flex gap-1.5 mt-2">
+                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:0ms]" />
+                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:150ms]" />
+                <span className="w-2 h-2 bg-indigo-500 rounded-full animate-bounce [animation-delay:300ms]" />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Messages */}
+        {chat.length === 0 && !isConnected && (
+          <div className="flex items-center justify-center h-full text-gray-600 text-sm">
+            Not connected yet.
+          </div>
+        )}
+        {chat.map((msg, i) => (
+          <MessageBubble key={i} msg={msg} myName={myName} />
+        ))}
       </main>
 
-      <footer className="p-2 sm:p-3 md:p-4 border-t border-gray-700 bg-black">
-        <div className="max-w-full sm:max-w-2xl mx-auto">
-          <div className="flex items-center bg-gray-700 rounded-full p-1 sm:p-2 shadow-inner">
-            <input
-              value={message}
-              onChange={(e) => setMessage(e.target.value)}
-              onKeyPress={(e) => {
-                if (e.key === "Enter") sendMessage();
-              }}
-              className="flex-1 px-2 sm:px-4 py-1 sm:py-2 bg-transparent border-none text-gray-200 focus:outline-none placeholder-gray-500 text-sm sm:text-base"
-              placeholder={
-                isConnected ? "Type a message..." : "Waiting to connect..."
-              }
-              disabled={!isConnected}
-            />
-            <button
-              onClick={sendMessage}
-              className={`w-9 h-9 sm:w-10 sm:h-10 md:w-12 md:h-12 flex items-center justify-center rounded-full transition-all duration-300 transform ${
-                isConnected && message.trim()
-                  ? "bg-indigo-600 hover:bg-indigo-500 text-white scale-100"
-                  : "bg-gray-600 text-gray-400 scale-90 cursor-not-allowed"
-              }`}
-              disabled={!isConnected || !message.trim()}
-            >
-              <svg
-                className="w-5 h-5 sm:w-6 sm:h-6 transform rotate-90"
-                fill="currentColor"
-                viewBox="0 0 20 20"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.428A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
-              </svg>
-            </button>
-          </div>
+      {/* ─── Footer Input ────────────────────────── */}
+      <footer className="shrink-0 px-4 sm:px-6 py-3 border-t border-white/8 bg-[#111]">
+        <div className="max-w-3xl mx-auto flex items-center gap-3 bg-[#1a1a1a] rounded-2xl px-4 py-2 border border-white/8 shadow-inner">
+          <input
+            ref={inputRef}
+            value={message}
+            onChange={(e) => setMessage(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && sendMessage()}
+            className="flex-1 bg-transparent border-none text-gray-100 placeholder-gray-600 focus:outline-none text-sm"
+            placeholder={
+              !isConnected
+                ? "Not connected..."
+                : !partnerJoined
+                ? "Waiting for someone to join..."
+                : `Message ${partnerName ?? "Stranger"}...`
+            }
+            disabled={!isConnected || !partnerJoined}
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!isConnected || !partnerJoined || !message.trim()}
+            className={`w-9 h-9 flex items-center justify-center rounded-full transition-all duration-200 flex-shrink-0 ${
+              isConnected && partnerJoined && message.trim()
+                ? "bg-indigo-600 hover:bg-indigo-500 text-white scale-100 shadow-md"
+                : "bg-gray-800 text-gray-600 cursor-not-allowed scale-95"
+            }`}
+          >
+            <svg className="w-4 h-4 rotate-90" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10.894 2.553a1 1 0 00-1.788 0l-7 14a1 1 0 001.169 1.409l5-1.428A1 1 0 009 15.571V11a1 1 0 112 0v4.571a1 1 0 00.725.962l5 1.428a1 1 0 001.17-1.408l-7-14z" />
+            </svg>
+          </button>
         </div>
+        <p className="text-center text-[10px] text-gray-700 mt-2">
+          Press <kbd className="font-mono bg-gray-800 px-1 rounded">Enter</kbd> to send
+        </p>
       </footer>
     </div>
   );
