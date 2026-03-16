@@ -1,6 +1,9 @@
 import json
 from channels.generic.websocket import AsyncWebsocketConsumer
 
+# In-memory registry: room_name -> {channel_name: display_name}
+_room_members: dict[str, dict[str, str]] = {}
+
 
 class ChatConsumer(AsyncWebsocketConsumer):
     async def connect(self):
@@ -8,13 +11,20 @@ class ChatConsumer(AsyncWebsocketConsumer):
         self.room_group_name = f"chat_{self.room_name}"
         user = self.scope.get("user")
         self.username = (
-            user.display_name or user.email.split("@")[0]
+            (user.display_name or user.email.split("@")[0])
             if user and user.is_authenticated
             else "Anonymous"
         )
+
+        # Track member in the registry
+        if self.room_name not in _room_members:
+            _room_members[self.room_name] = {}
+        _room_members[self.room_name][self.channel_name] = self.username
+
         await self.channel_layer.group_add(self.room_group_name, self.channel_name)
         await self.accept()
-        # Notify others in the room that this user joined, include username for partner display
+
+        # Notify OTHERS that this user joined
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -24,7 +34,30 @@ class ChatConsumer(AsyncWebsocketConsumer):
             },
         )
 
+        # Tell THIS user about everyone already in the room
+        existing = {
+            ch: name
+            for ch, name in _room_members[self.room_name].items()
+            if ch != self.channel_name
+        }
+        for partner_channel, partner_name in existing.items():
+            await self.send(
+                text_data=json.dumps(
+                    {
+                        "type": "partner_joined",
+                        "partner_name": partner_name,
+                        "message": f"--- {partner_name} is already here! 👋 ---",
+                    }
+                )
+            )
+
     async def disconnect(self, close_code):
+        # Remove from registry
+        if self.room_name in _room_members:
+            _room_members[self.room_name].pop(self.channel_name, None)
+            if not _room_members[self.room_name]:
+                del _room_members[self.room_name]
+
         await self.channel_layer.group_discard(self.room_group_name, self.channel_name)
         await self.channel_layer.group_send(
             self.room_group_name,
@@ -40,7 +73,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
         message_type = data.get("type")
 
         if message_type == "message":
-            message = data.get("message")
+            message = data.get("message", "")
             await self.channel_layer.group_send(
                 self.room_group_name,
                 {
@@ -52,26 +85,23 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
         elif message_type == "start_video":
-            session_id = f"{self.room_name}"
+            session_id = self.room_name
             await self.channel_layer.group_send(
                 self.room_group_name,
-                {
-                    "type": "video_initiated",
-                    "session_id": session_id,
-                },
+                {"type": "video_initiated", "session_id": session_id},
             )
+
         elif message_type == "start_voice":
             session_id = f"voice_{self.room_name}"
             await self.channel_layer.group_send(
                 self.room_group_name,
-                {
-                    "type": "voice_initiated",
-                    "session_id": session_id,
-                },
+                {"type": "voice_initiated", "session_id": session_id},
             )
 
+    # ─── Event handlers ────────────────────────────────────────────────────────
+
     async def user_joined(self, event):
-        """Send partner's name to the other user in the room."""
+        """Notify partner that a new user joined."""
         if self.channel_name != event.get("sender_channel_name"):
             await self.send(
                 text_data=json.dumps(
@@ -84,7 +114,6 @@ class ChatConsumer(AsyncWebsocketConsumer):
             )
 
     async def user_left(self, event):
-        """Notify when partner leaves."""
         if self.channel_name != event.get("sender_channel_name"):
             await self.send(
                 text_data=json.dumps(
@@ -107,33 +136,16 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 )
             )
 
-    async def system_message(self, event):
-        if self.channel_name != event.get("sender_channel_name"):
-            await self.send(
-                text_data=json.dumps(
-                    {
-                        "type": "system_message",
-                        "message": event["message"],
-                    }
-                )
-            )
-
     async def video_initiated(self, event):
         await self.send(
             text_data=json.dumps(
-                {
-                    "type": "video_initiated",
-                    "session_id": event["session_id"],
-                }
+                {"type": "video_initiated", "session_id": event["session_id"]}
             )
         )
 
     async def voice_initiated(self, event):
         await self.send(
             text_data=json.dumps(
-                {
-                    "type": "voice_initiated",
-                    "session_id": event["session_id"],
-                }
+                {"type": "voice_initiated", "session_id": event["session_id"]}
             )
         )
