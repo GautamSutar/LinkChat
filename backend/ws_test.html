@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>WS Test</title>
+</head>
+<body>
+  <h1>WebSocket Test</h1>
+  <div id="log"></div>
+  <script>
+    const log = (msg) => {
+      document.getElementById('log').innerHTML += msg + '<br>';
+      console.log(msg);
+    };
+
+    const ws = new WebSocket('ws://localhost:8000/ws/chat/random/?token=dummy');
+    ws.onopen = () => log('Opened!');
+    ws.onmessage = (e) => log('Message: ' + e.data);
+    ws.onclose = (e) => {
+      log('Closed! Code: ' + e.code + ', Reason: ' + e.reason + ', WasClean: ' + e.wasClean);
+    };
+    ws.onerror = (e) => {
+      log('Error event occurred');
+      console.error(e);
+    };
+  </script>
+</body>
+</html>

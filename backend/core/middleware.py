@@ -8,19 +8,28 @@ from user.models import User
 @database_sync_to_async
 def get_user(token_key: str):
     try:
-        print(
-            f"Attempting to validate token: {token_key[:15]}..."
-        ) 
+        print(f"DEBUG: Validating token starts: {token_key[:15]}...")
         token = AccessToken(token_key)
         user_id = token.payload.get("user_id")
+        
         if user_id:
-            print(f"Token valid. User ID: {user_id}")
-            user = User.objects.get(id=user_id)
-            return user
-        print("Token valid, but no user_id found in payload.")
+            try:
+                user = User.objects.get(id=user_id)
+                print(f"DEBUG: Token valid. Found user: {user.display_name} ({user.email})")
+                return user
+            except User.DoesNotExist:
+                print(f"DEBUG: Token valid but user {user_id} not found in DB.")
+                return AnonymousUser()
+        
+        print("DEBUG: Token valid, but no user_id found in payload.")
+        return AnonymousUser()
+    except TokenError as e:
+        print(f"DEBUG: TokenError: {str(e)}")
         return AnonymousUser()
     except Exception as e:
-        print(f"!!! TOKEN VALIDATION FAILED: {e}")
+        print(f"DEBUG: Unexpected error in token validation: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return AnonymousUser()
 
 class TokenAuthMiddleware:

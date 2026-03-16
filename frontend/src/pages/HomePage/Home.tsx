@@ -2,7 +2,7 @@ import React, { useState, useCallback } from "react";
 import ChatRoom from "../ChatRoomPage/ChatRoom";
 import VideoCall from "../VideoCallPage/VideoCall";
 import { useAuth } from "../../hooks/useAuth";
-type Mode = "chat" | "video";
+type Mode = "chat" | "video" | "voice";
 const HomePage: React.FC = () => {
   const [mode, setMode] = useState<Mode>("chat");
   const [sessionId, setSessionId] = useState<string | null>(null);
@@ -12,6 +12,12 @@ const HomePage: React.FC = () => {
     console.log("HomePage received session ID:", newSessionId);
     setSessionId(newSessionId);
     setMode("video");
+  }, []);
+
+  const handleStartVoice = useCallback((newSessionId: string) => {
+    console.log("HomePage received voice session ID:", newSessionId);
+    setSessionId(newSessionId);
+    setMode("voice");
   }, []);
 
   const handleLeave = useCallback(() => {
@@ -45,11 +51,13 @@ const HomePage: React.FC = () => {
             conversation awaits.
           </p>
         </header>
-        <main className="flex-1 flex flex-col bg-black rounded-2xl shadow-xl border border-gray-700 overflow-hidden max-w-full">
+        <main className="flex-1 flex flex-col bg-black rounded-2xl shadow-xl border border-gray-700 overflow-hidden max-w-5xl w-full mx-auto">
           {mode === "chat" ? (
-            <ChatRoom onStartVideo={handleStartVideo} onLeave={handleLeave} />
+            <ChatRoom onStartVideo={handleStartVideo} onStartVoice={handleStartVoice} onLeave={handleLeave} />
+          ) : mode === "video" ? (
+            <VideoCall sessionId={sessionId!} isVideo={true} onLeaveVideo={handleLeave} />
           ) : (
-            <VideoCall sessionId={sessionId!} onLeaveVideo={handleLeave} />
+            <VideoCall sessionId={sessionId!} isVideo={false} onLeaveVideo={handleLeave} />
           )}
         </main>
       </div>

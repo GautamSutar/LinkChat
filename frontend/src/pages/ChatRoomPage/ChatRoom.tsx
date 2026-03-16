@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from "react";
+import React, { useEffect, useState, useRef, useCallback } from "react";
 import config from "../../config.ts";
 import TokenService from "../../service/token.service";
 
@@ -14,6 +14,12 @@ type ChatMessage = {
 type ChatRoomProps = {
   onLeave?: () => void;
   onStartVideo: (sessionId: string) => void;
+  onStartVoice?: (sessionId: string) => void;
+};
+
+type IncomingCall = {
+  kind: "video" | "voice";
+  sessionId: string;
 };
 
 // ─────────────────────────────────────────────
@@ -41,10 +47,7 @@ const getInitials = (name: string) =>
 // ─────────────────────────────────────────────
 // Message Bubble
 // ─────────────────────────────────────────────
-const MessageBubble: React.FC<{ msg: ChatMessage; myName: string }> = ({
-  msg,
-  myName,
-}) => {
+const MessageBubble: React.FC<{ msg: ChatMessage; myName: string }> = ({ msg, myName }) => {
   const isMe = msg.sender === myName;
 
   if (msg.type === "system_message") {
@@ -59,7 +62,6 @@ const MessageBubble: React.FC<{ msg: ChatMessage; myName: string }> = ({
 
   return (
     <div className={`flex items-end gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
-      {/* Avatar */}
       <div
         className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold shadow-md ${
           isMe
@@ -69,8 +71,6 @@ const MessageBubble: React.FC<{ msg: ChatMessage; myName: string }> = ({
       >
         {getInitials(isMe ? myName : msg.sender)}
       </div>
-
-      {/* Bubble */}
       <div className={`flex flex-col max-w-[72%] ${isMe ? "items-end" : "items-start"}`}>
         <span className="text-[10px] text-gray-500 mb-1 px-1 font-medium">
           {isMe ? "You" : msg.sender}
@@ -93,18 +93,107 @@ const MessageBubble: React.FC<{ msg: ChatMessage; myName: string }> = ({
 };
 
 // ─────────────────────────────────────────────
-// ChatRoom
+// Incoming Call Modal
 // ─────────────────────────────────────────────
-const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
+const IncomingCallModal: React.FC<{
+  call: IncomingCall;
+  onAccept: () => void;
+  onDeny: () => void;
+}> = ({ call, onAccept, onDeny }) => (
+  <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-4 shadow-2xl max-w-xs w-full mx-4">
+      <div className="w-16 h-16 rounded-full bg-indigo-600 flex items-center justify-center animate-pulse">
+        {call.kind === "video" ? (
+          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
+          </svg>
+        ) : (
+          <svg className="w-8 h-8 text-white" fill="currentColor" viewBox="0 0 24 24">
+            <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
+          </svg>
+        )}
+      </div>
+      <div className="text-center">
+        <p className="text-white font-semibold text-lg">
+          Incoming {call.kind === "video" ? "Video" : "Voice"} Call
+        </p>
+        <p className="text-gray-400 text-sm mt-1">Stranger is calling you...</p>
+      </div>
+      <div className="flex gap-4 w-full">
+        <button
+          onClick={onDeny}
+          className="flex-1 py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition cursor-pointer"
+        >
+          Decline
+        </button>
+        <button
+          onClick={onAccept}
+          className="flex-1 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-sm transition cursor-pointer"
+        >
+          Accept
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────
+// Outgoing Call Overlay
+// ─────────────────────────────────────────────
+const OutgoingCallOverlay: React.FC<{ kind: string; onCancel: () => void }> = ({
+  kind,
+  onCancel,
+}) => (
+  <div className="absolute inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl p-6 flex flex-col items-center gap-4 shadow-2xl max-w-xs w-full mx-4">
+      <div className="w-16 h-16 rounded-full bg-indigo-700 flex items-center justify-center">
+        <div className="w-14 h-14 rounded-full border-4 border-indigo-400 animate-ping absolute" />
+        <svg className="w-8 h-8 text-white relative" fill="currentColor" viewBox="0 0 24 24">
+          <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
+        </svg>
+      </div>
+      <div className="text-center">
+        <p className="text-white font-semibold text-lg">
+          Calling... ({kind === "video" ? "Video" : "Voice"})
+        </p>
+        <p className="text-gray-400 text-sm mt-1">Waiting for the other person to pick up</p>
+      </div>
+      <button
+        onClick={onCancel}
+        className="w-full py-2.5 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold text-sm transition cursor-pointer"
+      >
+        Cancel
+      </button>
+    </div>
+  </div>
+);
+
+// ─────────────────────────────────────────────
+// ChatRoom Component
+// ─────────────────────────────────────────────
+const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo, onStartVoice }) => {
   const [message, setMessage] = useState("");
   const [chat, setChat] = useState<ChatMessage[]>([]);
   const [isConnected, setIsConnected] = useState(false);
   const [partnerJoined, setPartnerJoined] = useState(false);
   const [partnerName, setPartnerName] = useState<string | null>(null);
+  const [partnerGender, setPartnerGender] = useState<string | null>(null);
+  const [incomingCall, setIncomingCall] = useState<IncomingCall | null>(null);
+  const [outgoingCall, setOutgoingCall] = useState<{ kind: string; sessionId: string } | null>(null);
+
   const ws = useRef<WebSocket | null>(null);
   const chatContainerRef = useRef<HTMLDivElement | null>(null);
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const ringtone = useRef<HTMLAudioElement | null>(null);
+  const outgoingRingtone = useRef<HTMLAudioElement | null>(null);
   const myName = getMyName();
+
+  useEffect(() => {
+    ringtone.current = new Audio("/sounds/slack_ringtone.mp3");
+    ringtone.current.loop = true;
+    outgoingRingtone.current = new Audio("/sounds/slack_ringtone.mp3");
+    outgoingRingtone.current.loop = true;
+  }, []);
 
   // Auto-scroll on new message
   useEffect(() => {
@@ -112,6 +201,15 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
       chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
     }
   }, [chat]);
+
+  const stopAllRingtones = useCallback(() => {
+    try {
+      ringtone.current?.pause();
+      if (ringtone.current) ringtone.current.currentTime = 0;
+      outgoingRingtone.current?.pause();
+      if (outgoingRingtone.current) outgoingRingtone.current.currentTime = 0;
+    } catch {}
+  }, []);
 
   // WebSocket connection
   useEffect(() => {
@@ -130,6 +228,8 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
       setIsConnected(false);
       setPartnerJoined(false);
       setPartnerName(null);
+      setPartnerGender(null);
+      stopAllRingtones();
       setChat((prev) => [
         ...prev,
         { message: "You have been disconnected.", sender: "System", type: "system_message" },
@@ -140,10 +240,12 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
 
     socket.onmessage = (event: MessageEvent) => {
       const data = JSON.parse(event.data);
+      console.log("DEBUG: WS Received:", data.type, data);
 
       if (data.type === "partner_joined") {
         setPartnerJoined(true);
         setPartnerName(data.partner_name || "Stranger");
+        setPartnerGender(data.partner_gender || "O");
         setChat((prev) => [
           ...prev,
           { message: data.message, sender: "System", type: "system_message" },
@@ -151,11 +253,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
       } else if (data.type === "partner_left") {
         setPartnerJoined(false);
         setPartnerName(null);
+        setPartnerGender(null);
+        stopAllRingtones();
+        setIncomingCall(null);
+        setOutgoingCall(null);
         setChat((prev) => [
           ...prev,
           { message: data.message, sender: "System", type: "system_message" },
         ]);
-      } else if (data.type === "chat_message" && data.sender !== myName) {
+      } else if (data.type === "chat_message") {
+        if (data.sender === myName && myName !== "Anonymous") return;
         const msgText =
           typeof data.message === "object" ? JSON.stringify(data.message) : data.message;
         setChat((prev) => [
@@ -169,16 +276,41 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
           ...prev,
           { message: msgText, sender: "System", type: "system_message" },
         ]);
-      } else if (data.type === "video_initiated") {
-        if (onStartVideo) onStartVideo(data.session_id);
+      } else if (data.type === "call_incoming") {
+        // Receiver: show incoming call modal + play ringtone
+        setIncomingCall({ kind: data.call_kind, sessionId: data.session_id });
+        ringtone.current?.play().catch(() => {});
+      } else if (data.type === "call_outgoing") {
+        // Caller: show outgoing overlay + play outgoing ringtone
+        setOutgoingCall({ kind: data.call_kind, sessionId: data.session_id });
+        outgoingRingtone.current?.play().catch(() => {});
+      } else if (data.type === "call_started") {
+        // Both: stop ringtones and navigate to the call
+        stopAllRingtones();
+        setIncomingCall(null);
+        setOutgoingCall(null);
+        if (data.call_kind === "video") {
+          if (onStartVideo) onStartVideo(data.session_id);
+        } else {
+          if (onStartVoice) onStartVoice(data.session_id);
+        }
+      } else if (data.type === "call_rejected") {
+        // Caller: the receiver rejected
+        stopAllRingtones();
+        setOutgoingCall(null);
+        setChat((prev) => [
+          ...prev,
+          { message: "--- Call was declined ---", sender: "System", type: "system_message" },
+        ]);
       }
     };
 
     return () => {
       socket.onmessage = null;
+      stopAllRingtones();
       if (socket.readyState === WebSocket.OPEN) socket.close();
     };
-  }, [onStartVideo, onLeave, myName]);
+  }, [onStartVideo, onStartVoice, onLeave, myName, stopAllRingtones]);
 
   const sendMessage = () => {
     if (ws.current?.readyState === WebSocket.OPEN && message.trim()) {
@@ -204,12 +336,41 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
     }
   };
 
+  const handleAcceptCall = () => {
+    if (!incomingCall) return;
+    ws.current?.send(
+      JSON.stringify({
+        type: "call_accepted",
+        call_kind: incomingCall.kind,
+        session_id: incomingCall.sessionId,
+      })
+    );
+    stopAllRingtones();
+  };
+
+  const handleDenyCall = () => {
+    if (!incomingCall) return;
+    ws.current?.send(JSON.stringify({ type: "call_denied" }));
+    stopAllRingtones();
+    setIncomingCall(null);
+  };
+
+  const handleCancelOutgoing = () => {
+    ws.current?.send(JSON.stringify({ type: "call_denied" }));
+    stopAllRingtones();
+    setOutgoingCall(null);
+  };
+
   // ─── Header Status Pill ─────────────────────
   const StatusPill = () => (
     <div className="flex items-center gap-1.5">
       <span
         className={`w-2 h-2 rounded-full ${
-          partnerJoined ? "bg-emerald-400 animate-pulse" : isConnected ? "bg-yellow-400 animate-pulse" : "bg-gray-600"
+          partnerJoined
+            ? "bg-emerald-400 animate-pulse"
+            : isConnected
+            ? "bg-yellow-400 animate-pulse"
+            : "bg-gray-600"
         }`}
       />
       <span className="text-xs text-gray-400 font-medium">
@@ -219,7 +380,21 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
   );
 
   return (
-    <div className="flex flex-col h-screen bg-[#0d0d0d]">
+    <div className="flex flex-col flex-1 h-full w-full bg-[#0d0d0d] relative">
+      {/* Incoming Call Modal */}
+      {incomingCall && (
+        <IncomingCallModal
+          call={incomingCall}
+          onAccept={handleAcceptCall}
+          onDeny={handleDenyCall}
+        />
+      )}
+
+      {/* Outgoing Call Overlay */}
+      {outgoingCall && (
+        <OutgoingCallOverlay kind={outgoingCall.kind} onCancel={handleCancelOutgoing} />
+      )}
+
       {/* ─── Header ─────────────────────────────── */}
       <header className="flex items-center justify-between px-4 sm:px-6 py-3 border-b border-white/8 bg-[#111] backdrop-blur supports-[backdrop-filter]:bg-[#111]/80 z-10 shrink-0">
         {/* Left: Avatar + Name + Status */}
@@ -239,9 +414,16 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
             )}
           </div>
           <div>
-            <p className="text-sm font-semibold text-gray-100 leading-none">
-              {partnerJoined && partnerName ? partnerName : "Stranger"}
-            </p>
+            <div className="flex items-center gap-2">
+              <p className="text-sm font-semibold text-gray-100 leading-none">
+                {partnerJoined && partnerName ? partnerName : "Stranger"}
+              </p>
+              {partnerJoined && partnerGender && partnerGender !== "O" && (
+                <span className="text-xs text-gray-400 font-medium">
+                  ({partnerGender === "M" ? "Male" : "Female"})
+                </span>
+              )}
+            </div>
             <div className="mt-0.5">
               <StatusPill />
             </div>
@@ -256,7 +438,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
               <button
                 onClick={handleStartVoice}
                 title="Start voice call"
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-800 hover:bg-emerald-700 text-gray-300 hover:text-white transition-all duration-200 hover:scale-110 shadow"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-800 hover:bg-emerald-700 text-gray-300 hover:text-white transition-all duration-200 hover:scale-110 shadow cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M6.62 10.79a15.053 15.053 0 006.59 6.59l2.2-2.2a1 1 0 011.02-.24c1.12.37 2.33.57 3.57.57a1 1 0 011 1V20a1 1 0 01-1 1C10.61 21 3 13.39 3 4a1 1 0 011-1h3.5a1 1 0 011 1c0 1.25.2 2.45.57 3.57a1 1 0 01-.25 1.02l-2.2 2.2z" />
@@ -267,7 +449,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
               <button
                 onClick={handleStartVideo}
                 title="Start video call"
-                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-800 hover:bg-indigo-700 text-gray-300 hover:text-white transition-all duration-200 hover:scale-110 shadow"
+                className="w-9 h-9 flex items-center justify-center rounded-full bg-gray-800 hover:bg-indigo-700 text-gray-300 hover:text-white transition-all duration-200 hover:scale-110 shadow cursor-pointer"
               >
                 <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
                   <path d="M17 10.5V7a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h12a1 1 0 001-1v-3.5l4 4v-11l-4 4z" />
@@ -330,7 +512,7 @@ const ChatRoom: React.FC<ChatRoomProps> = ({ onLeave, onStartVideo }) => {
 
       {/* ─── Footer Input ────────────────────────── */}
       <footer className="shrink-0 px-4 sm:px-6 py-3 border-t border-white/8 bg-[#111]">
-        <div className="max-w-3xl mx-auto flex items-center gap-3 bg-[#1a1a1a] rounded-2xl px-4 py-2 border border-white/8 shadow-inner">
+        <div className="flex items-center gap-3 bg-[#1a1a1a] rounded-2xl px-4 py-2 border border-white/8 shadow-inner">
           <input
             ref={inputRef}
             value={message}

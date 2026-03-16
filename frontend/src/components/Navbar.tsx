@@ -3,7 +3,7 @@ import { NavLink, Link } from "react-router-dom"; // Use NavLink for navigation 
 
 const Navbar: React.FC = () => {
   return (
-    <nav className="bg-black text-white shadow-lg">
+    <nav className="fixed w-full top-0 z-50 bg-[#0a0a0a]/70 backdrop-blur-md border-b border-white/10 shadow-[0_4px_30px_rgba(0,0,0,0.5)]">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           {/* Left Side: Logo and Brand (using Link for non-nav items) */}
@@ -18,9 +18,9 @@ const Navbar: React.FC = () => {
                 to="/"
                 // This function dynamically applies classes
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                    ? "bg-gray-500 text-white"
-                    : "text-gray-300 hover:bg-gray-700 hover:text-white" // Style for inactive links
+                  `px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${isActive
+                    ? "bg-white/10 text-white shadow-sm"
+                    : "text-gray-400 hover:bg-white/5 hover:text-white"
                   }`
                 }
               >
@@ -30,9 +30,9 @@ const Navbar: React.FC = () => {
               <NavLink
                 to="/features"
                 className={({ isActive }) =>
-                  `px-3 py-2 rounded-md text-sm font-medium transition-colors ${isActive
-                    ? "bg-gray-500 text-white"
-                    : "text-gray-300 hover:bg-gray-700 hover:text-white"
+                  `px-4 py-2 rounded-full text-sm font-medium transition-all duration-300 ${isActive
+                    ? "bg-white/10 text-white shadow-sm"
+                    : "text-gray-400 hover:bg-white/5 hover:text-white"
                   }`
                 }
               >
@@ -45,13 +45,13 @@ const Navbar: React.FC = () => {
           <div className="flex items-center gap-4">
             <Link
               to="/login"
-              className="text-gray-300 hover:text-white transition-colors text-sm font-medium"
+              className="px-4 py-2 rounded-full text-sm font-medium text-gray-300 hover:text-white hover:bg-white/5 transition-all duration-300"
             >
               Log In
             </Link>
             <Link
               to="/signup"
-              className="bg-emerald-500 hover:bg-emerald-600 text-white font-bold py-2 px-4 rounded-lg text-sm transition-all transform hover:scale-105"
+              className="px-5 py-2 rounded-full text-sm font-semibold text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-500/25 transition-all duration-300 transform hover:-translate-y-0.5"
             >
               Sign Up
             </Link>
