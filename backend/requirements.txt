@@ -34,7 +34,6 @@ click-repl==0.3.0
 cloudinary==1.44.1
 colorama==0.4.6
 comm==0.2.2
-comtypes==1.4.10
 constantly==23.10.4
 coverage==7.10.3
 cryptography==46.0.1
@@ -164,7 +163,6 @@ PyMuPDF==1.25.3
 pyOpenSSL==25.3.0
 pyparsing==3.2.1
 pypdfium2==4.30.1
-pypiwin32==223
 pytest==8.4.2
 pytest-django==4.11.1
 python-dateutil==2.9.0.post0
@@ -177,8 +175,6 @@ python-multipart==0.0.9
 python-socketio==5.13.0
 pytz==2025.1
 pywebpush==2.0.3
-pywin32==308
-pywinpty==2.0.15
 PyYAML==6.0.2
 pyzmq==26.2.1
 RapidFuzz==3.13.0
@@ -208,8 +204,6 @@ terminado==0.18.1
 threadpoolctl==3.5.0
 tiktoken==0.11.0
 tinycss2==1.4.0
-torch==2.7.1+cu118
-torchvision==0.22.1+cu118
 tornado==6.4.2
 tqdm==4.67.1
 traitlets==5.14.3
